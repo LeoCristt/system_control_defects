@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export type UserRole = 'engineer' | 'manager' | 'supervisor';
 
@@ -22,86 +21,60 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Mock users data (for development only - in production, use real backend)
-const mockUsers: Record<string, { user: User; password: string }> = {
-  'engineer@test.com': {
-    user: {
-      id: '1',
-      name: 'Алексей Инженеров',
-      email: 'engineer@test.com',
-      role: 'engineer'
-    },
-    password: 'password123' // Use unique passwords in real scenarios
+// Mock users 
+const mockUsers: User[] = [
+  {
+    id: '1',
+    name: 'Алексей Инженеров',
+    email: 'engineer@test.com',
+    role: 'engineer'
   },
-  'manager@test.com': {
-    user: {
-      id: '2',
-      name: 'Мария Менеджерова',
-      email: 'manager@test.com',
-      role: 'manager'
-    },
-    password: 'password123'
+  {
+    id: '2',
+    name: 'Мария Менеджерова',
+    email: 'manager@test.com',
+    role: 'manager'
   },
-  'supervisor@test.com': {
-    user: {
-      id: '3',
-      name: 'Иван Руководителев',
-      email: 'supervisor@test.com',
-      role: 'supervisor'
-    },
-    password: 'password123'
+  {
+    id: '3',
+    name: 'Иван Руководителев',
+    email: 'supervisor@test.com',
+    role: 'supervisor'
   }
-};
+];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    // Simulate checking auth token from secure storage (e.g., httpOnly cookie)
-    // In real app, fetch user from backend with token
-    const savedUser = localStorage.getItem('mockUser'); // Not secure - demo only
+    const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        // Validate user exists in mock (in real: verify token)
-        if (mockUsers[parsedUser.email]) {
-          setUser(parsedUser);
-        }
-      } catch (error) {
-        console.error('Invalid saved user');
-      }
+      setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock authentication
-    const userData = mockUsers[email];
-    if (userData && userData.password === password) {
-      setUser(userData.user);
-      // In real app: set httpOnly cookie with JWT
-      localStorage.setItem('mockUser', JSON.stringify(userData.user)); // Demo only
+
+    // Mock authentication 
+    const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (foundUser && password.toLowerCase() === 'password') {
+      setUser(foundUser);
+      localStorage.setItem('currentUser', JSON.stringify(foundUser));
       setIsLoading(false);
-      router.push('/dashboard'); // Auto-redirect on success
       return true;
     }
-    
+
     setIsLoading(false);
     return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('mockUser');
-    // In real: clear cookie and redirect
-    router.push('/');
+    localStorage.removeItem('currentUser');
   };
 
   return (

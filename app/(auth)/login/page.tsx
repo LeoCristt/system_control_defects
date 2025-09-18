@@ -1,28 +1,36 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Login() {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const router = useRouter();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     const success = await login(email, password);
     
-    if (!success) {
+    if (success) {
+      router.push('/dashboard');
+    } else {
       setError('Неверный email или пароль');
     }
+    
+    setIsLoading(false);
   };
 
-  const quickLogin = async (userEmail: string, userPassword: string) => {
+  const quickLogin = (userEmail: string) => {
     setEmail(userEmail);
-    setPassword(userPassword);
-    await login(userEmail, userPassword);
+    setPassword('password');
   };
 
   return (
@@ -89,21 +97,21 @@ export default function Login() {
             <p className="text-sm text-gray-600 mb-4 text-center">Быстрый вход (демо):</p>
             <div className="space-y-2">
               <button
-                onClick={() => quickLogin('engineer@test.com', 'password123')}
+                onClick={() => quickLogin('engineer@test.com')}
                 className="w-full text-left px-4 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
               >
                 <span className="font-medium text-green-800">Инженер</span>
                 <span className="text-green-600 text-sm block">engineer@test.com</span>
               </button>
               <button
-                onClick={() => quickLogin('manager@test.com', 'password123')}
+                onClick={() => quickLogin('manager@test.com')}
                 className="w-full text-left px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
               >
                 <span className="font-medium text-blue-800">Менеджер</span>
                 <span className="text-blue-600 text-sm block">manager@test.com</span>
               </button>
               <button
-                onClick={() => quickLogin('supervisor@test.com', 'password123')}
+                onClick={() => quickLogin('supervisor@test.com')}
                 className="w-full text-left px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
               >
                 <span className="font-medium text-purple-800">Руководитель</span>
