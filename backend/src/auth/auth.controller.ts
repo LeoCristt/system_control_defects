@@ -28,10 +28,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   signIn(@Body() signInDto: Record<string, any>) {
-    if (!signInDto || !signInDto.username || !signInDto.password) {
-      throw new BadRequestException('Требуются имя пользователя и пароль');
+    if (!signInDto || !signInDto.email || !signInDto.password) {
+      throw new BadRequestException('Требуются email и пароль');
     }
-    return this.authService.signIn(signInDto.username, signInDto.password);
+    return this.authService.signIn(signInDto.email, signInDto.password);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -48,8 +48,8 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    if (!registerDto.username || !registerDto.password) {
-      throw new BadRequestException('Требуются имя пользователя и пароль');
+    if (!registerDto.email || !registerDto.username || !registerDto.password) {
+      throw new BadRequestException('Требуются email, имя пользователя и пароль');
     }
 
     if (registerDto.role === 'leader') {
@@ -57,14 +57,14 @@ export class AuthController {
     }
 
     try {
-      const user = await this.usersService.create(registerDto.username, registerDto.password, registerDto.role);
+      const user = await this.usersService.create(registerDto.email, registerDto.username, registerDto.password, registerDto.role);
       return {
         message: 'Пользователь успешно зарегистрирован',
-        user: { id: user.id, username: user.username, role: user.role }
+        user: { id: user.id, email: user.email, username: user.username, role: user.role }
       };
     } catch (error) {
-      if (error.code === '23505') { 
-        throw new BadRequestException('Имя пользователя уже существует');
+      if (error.code === '23505') {
+        throw new BadRequestException('Email или имя пользователя уже существует');
       }
       throw error;
     }

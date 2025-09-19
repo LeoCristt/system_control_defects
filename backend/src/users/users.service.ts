@@ -12,14 +12,15 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async findOne(username: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({ where: { username } });
+  async findOne(email: string): Promise<User | undefined> {
+    const user = await this.usersRepository.findOne({ where: { email } });
     return user || undefined;
   }
 
-  async create(username: string, password: string, role?: UserRole): Promise<User> {
+  async create(email: string, username: string, password: string, role?: UserRole): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = this.usersRepository.create({
+      email,
       username,
       password: hashedPassword,
       role: role || UserRole.ENGINEER,

@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { jwtConstants } from './constants';
 
+bcrypt.hash('your_password_here', 10).then(console.log);
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -13,14 +15,14 @@ export class AuthService {
   ) {}
 
   async signIn(
-    username: string,
+    email: string,
     pass: string,
   ): Promise<{ access_token: string; refresh_token: string }> {
-    const user = await this.usersService.findOne(username);
+    const user = await this.usersService.findOne(email);
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();
     }
-    const payload = { sub: user.id, username: user.username, role: user.role };
+    const payload = { sub: user.id, username: user.username, email: user.email, role: user.role };
     return {
       access_token: await this.jwtService.signAsync(payload, { expiresIn: '15m' }),
       refresh_token: await this.jwtService.signAsync(payload, { expiresIn: '7d', secret: jwtConstants.refreshSecret }),
@@ -32,7 +34,7 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: jwtConstants.refreshSecret,
       });
-      const newPayload = { sub: payload.sub, username: payload.username, role: payload.role };
+      const newPayload = { sub: payload.sub, username: payload.username, email: payload.email, role: payload.role };
       return {
         access_token: await this.jwtService.signAsync(newPayload, { expiresIn: '15m' }),
       };
@@ -41,3 +43,5 @@ export class AuthService {
     }
   }
 }
+
+

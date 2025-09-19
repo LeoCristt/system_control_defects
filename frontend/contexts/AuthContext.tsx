@@ -2,14 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 export type UserRole = 'engineer' | 'manager' | 'leader';
 
 export interface User {
-  id: string;
-  name: string;
+  id: number;
   email: string;
   role: UserRole;
-  avatar?: string;
 }
 
 interface AuthContextType {
@@ -21,36 +22,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Mock users 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'Алексей Инженеров',
-    email: 'engineer@test.com',
-    role: 'engineer'
-  },
-  {
-    id: '2',
-    name: 'Мария Менеджерова',
-    email: 'manager@test.com',
-    role: 'manager'
-  },
-  {
-    id: '3',
-    name: 'Иван Руководителев',
-    email: 'supervisor@test.com',
-    role: 'leader'
-  }
-];
+function decodeToken(token: string): User {
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  return { id: payload.sub, email: payload.email, role: payload.role };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const accessToken = localStorage.getItem('access_token');
+    if (accessToken) {
+      try {
+        const decodedUser = decodeToken(accessToken);
+        setUser(decodedUser);
+      } catch (error) {
+        console.error('Invalid token', error);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -58,14 +49,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
 
-    // Mock authentication 
-    const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-    if (foundUser && password.toLowerCase() === 'password') {
-      setUser(foundUser);
-      localStorage.setItem('currentUser', JSON.stringify(foundUser));
-      setIsLoading(false);
-      return true;
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        const decodedUser = decodeToken(data.access_token);
+        setUser(decodedUser);
+        setIsLoading(false);
+        return true;
+      }
+    } catch (error) {
+      console.error('Login error', error);
     }
 
     setIsLoading(false);
@@ -74,7 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
   };
 
   return (

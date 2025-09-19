@@ -27,7 +27,7 @@ export default function AuthLayout({
   }
 
   if (user) {
-    return null; // Will redirect
+    return null; 
   }
 
   return <>{children}</>;
