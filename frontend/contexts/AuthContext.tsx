@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type UserRole = 'engineer' | 'manager' | 'supervisor';
+export type UserRole = 'engineer' | 'manager' | 'leader';
 
 export interface User {
   id: string;
@@ -39,7 +39,7 @@ const mockUsers: User[] = [
     id: '3',
     name: 'Иван Руководителев',
     email: 'supervisor@test.com',
-    role: 'supervisor'
+    role: 'leader'
   }
 ];
 
