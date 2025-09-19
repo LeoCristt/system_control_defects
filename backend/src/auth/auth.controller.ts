@@ -34,6 +34,15 @@ export class AuthController {
     return this.authService.signIn(signInDto.username, signInDto.password);
   }
 
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  async refresh(@Body('refresh_token') refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Требуется refresh_token');
+    }
+    return this.authService.refresh(refreshToken);
+  }
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.LEADER)
   @HttpCode(HttpStatus.CREATED)
