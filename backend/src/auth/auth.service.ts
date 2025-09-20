@@ -42,6 +42,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
+
+  async logout(userId: number, refreshToken: string): Promise<{ message: string }> {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: jwtConstants.refreshSecret,
+      });
+
+      // Потом можно добавлять токен в блек лист(но это потом)
+      // Пока что тут заглушка
+      return {
+        message: 'Выход выполнен успешно'
+      };
+    } catch {
+      throw new UnauthorizedException('Неверный refresh token');
+    }
+  }
 }
 
 

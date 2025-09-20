@@ -65,7 +65,7 @@ export default function Navigation() {
   });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg dark:border-gray-800 dark:bg-gray-900">
       <div className="flex justify-around py-2">
         {filteredItems.map(item => (
           <button
@@ -73,8 +73,8 @@ export default function Navigation() {
             onClick={() => router.push(item.path)}
             className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
               pathname === item.path
-                ? 'text-blue-600 bg-blue-50'
-                : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                ? 'text-[#5E62DB] bg-[#5e62db17]'
+                : 'text-[#5E62DB] hover:text-[#5E62DB] hover:bg-[#5e62db17]'
             }`}
           >
             <div className={`mb-1 ${pathname === item.path ? 'scale-110' : ''} transition-transform duration-200`}>

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Navigation from '@/components/navigation/Navigation';
+import Header from "@/components/navigation/Header";
 
 export default function DashboardLayout({
   children,
@@ -28,14 +29,13 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return null; 
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="pb-20">
-        {children}
-      </div>
+      <Header />
+      {children}
       <Navigation />
     </div>
   );

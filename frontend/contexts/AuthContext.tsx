@@ -73,10 +73,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    setIsLoading(true);
+
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (refreshToken) {
+        const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+
+        if (!res.ok) {
+          console.error('Logout API call failed');
+        }
+      }
+    } catch (error) {
+      console.error('Logout error', error);
+    }
+
     setUser(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    setIsLoading(false);
   };
 
   return (

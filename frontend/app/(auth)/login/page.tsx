@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import logo from '@/public/svg-gobbler.png'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,11 +26,6 @@ export default function LoginPage() {
     }
 
     setIsLoading(false);
-  };
-
-  const quickLogin = (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('password');
   };
 
   return (
@@ -120,33 +114,6 @@ export default function LoginPage() {
               {isLoading ? 'Вход...' : 'Войти'}
             </button>
           </form>
-
-          {/* <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 mb-4 text-center">Быстрый вход (демо):</p>
-            <div className="space-y-2">
-              <button
-                onClick={() => quickLogin('engineer@test.com')}
-                className="w-full text-left px-4 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-              >
-                <span className="font-medium text-green-800">Инженер</span>
-                <span className="text-green-600 text-sm block">engineer@test.com</span>
-              </button>
-              <button
-                onClick={() => quickLogin('manager@test.com')}
-                className="w-full text-left px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <span className="font-medium text-blue-800">Менеджер</span>
-                <span className="text-blue-600 text-sm block">manager@test.com</span>
-              </button>
-              <button
-                onClick={() => quickLogin('supervisor@test.com')}
-                className="w-full text-left px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
-              >
-                <span className="font-medium text-purple-800">Руководитель</span>
-                <span className="text-purple-600 text-sm block">supervisor@test.com</span>
-              </button>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>

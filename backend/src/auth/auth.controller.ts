@@ -75,4 +75,14 @@ export class AuthController {
   getProfile(@Request() req) {
     return req.user;
   }
+
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
+  async logout(@Request() req, @Body('refresh_token') refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Требуется refresh_token');
+    }
+    return this.authService.logout(req.user.sub, refreshToken);
+  }
 }
