@@ -15,7 +15,7 @@ export class AppService implements OnModuleInit {
 
   async onModuleInit() {
     // Создание ролей
-    const roles = ['менеджер', 'инженер', 'руководитель'];
+    const roles = ['manager', 'engineer', 'leader'];
     for (const roleName of roles) {
       const existing = await this.rolesService.findOneByName(roleName);
       if (!existing) {
@@ -27,7 +27,7 @@ export class AppService implements OnModuleInit {
     const adminEmail = 'admin@admin.com';
     const existingAdmin = await this.usersService.findOne(adminEmail);
     if (!existingAdmin) {
-      await this.usersService.create(adminEmail, 'admin', 'admin', 'руководитель', 'Admin User');
+      await this.usersService.create(adminEmail, 'admin', 'admin', 'leader', 'Admin User');
     }
   }
 }

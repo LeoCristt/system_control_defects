@@ -26,6 +26,7 @@ import { HistoryModule } from './history/history.module';
 import { History } from './history/history.entity';
 import { ReportsModule } from './reports/reports.module';
 import { Report } from './reports/report.entity';
+import { ProjectUser } from './projects/project-user.entity';
 
 @Module({
   imports: [
@@ -42,7 +43,7 @@ import { Report } from './reports/report.entity';
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: config.get<string>('DB_PASSWORD', 'password'),
         database: config.get<string>('DB_NAME', 'defects_analysis'),
-        entities: [User, Role, Project, Stage, Status, Priority, Defect, Comment, Attachment, History, Report],
+        entities: [User, Role, Project, ProjectUser, Stage, Status, Priority, Defect, Comment, Attachment, History, Report],
         synchronize: true,
         logging: true,
       }),

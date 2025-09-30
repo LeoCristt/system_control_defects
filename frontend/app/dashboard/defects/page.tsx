@@ -1,86 +1,131 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface Defect {
+  id: number;
+  title: string;
+  description: string;
+  project: {
+    id: number;
+    name: string;
+  };
+  stage: {
+    id: number;
+    name: string;
+  } | null;
+  creator: {
+    id: number;
+    username: string;
+  };
+  assignee: {
+    id: number;
+    username: string;
+  } | null;
+  priority: {
+    id: number;
+    name: string;
+  };
+  status: {
+    id: number;
+    name: string;
+  };
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Project {
+  id: number;
+  name: string;
+}
+
+interface ApiResponse {
+  defects: Defect[];
+  projects: Project[];
+}
+
 export default function DefectsPage() {
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
   const router = useRouter();
+  const [data, setData] = useState<ApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
-  const [selectedObject, setSelectedObject] = useState('');
+  const [selectedStage, setSelectedStage] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
-  const [defects] = useState([
-    {
-      id: 1,
-      name: 'Трещина в стене',
-      project: 'ЖК "Северная звезда"',
-      object: 'Корпус 1',
-      status: 'open',
-      priority: 'high',
-      description: 'Обнаружена трещина в несущей стене на 5 этаже.',
-      created: '2025-09-01',
-      resolved: null
-    },
-    {
-      id: 2,
-      name: 'Протечка крыши',
-      project: 'Торговый центр "Галерея"',
-      object: 'Зал 2',
-      status: 'in_progress',
-      priority: 'medium',
-      description: 'Протечка в районе центрального входа после дождя.',
-      created: '2025-09-05',
-      resolved: null
-    },
-    {
-      id: 3,
-      name: 'Неисправный лифт',
-      project: 'Офисный комплекс "Технопарк"',
-      object: 'Башня A',
-      status: 'resolved',
-      priority: 'high',
-      description: 'Лифт застревает между этажами.',
-      created: '2025-08-20',
-      resolved: '2025-09-10'
-    },
-    {
-      id: 4,
-      name: 'Проблемы с электрикой',
-      project: 'Жилой комплекс "Восток"',
-      object: 'Квартира 45',
-      status: 'open',
-      priority: 'low',
-      description: 'Частые перебои в подаче электричества.',
-      created: '2025-09-15',
-      resolved: null
-    },
-    {
-      id: 5,
-      name: 'Повреждение фасада',
-      project: 'ЖК "Северная звезда"',
-      object: 'Корпус 2',
-      status: 'in_progress',
-      priority: 'medium',
-      description: 'Отслоение штукатурки на внешней стене.',
-      created: '2025-09-10',
-      resolved: null
-    },
-  ]);
+  useEffect(() => {
+    const fetchDefects = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/defects`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        });
 
-  // Получаем уникальные проекты, объекты и статусы для фильтров
-  const projects = [...new Set(defects.map(d => d.project))];
-  const objects = [...new Set(defects.map(d => d.object))];
-  const statuses = [...new Set(defects.map(d => d.status))];
+        if (!response.ok) {
+          throw new Error('Failed to fetch defects');
+        }
+
+        const result: ApiResponse = await response.json();
+        setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDefects();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Загрузка...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
+        <div className="text-red-600 dark:text-red-400">Ошибка: {error}</div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { defects, projects } = data;
+
+  // Получаем уникальные проекты и статусы для фильтров
+  const uniqueProjects = projects;
+  const statuses = [...new Set(defects.map(d => d.status.name))];
+
+  // Получаем стадии для выбранного проекта
+  const projectStages = selectedProject === ''
+    ? []
+    : [...new Set(
+        defects
+          .filter(d => d.project.name === selectedProject)
+          .map(d => d.stage?.name)
+          .filter(Boolean)
+      )];
 
   // Фильтрация дефектов
   const filteredDefects = defects.filter(defect => {
     return (
-      (searchTerm === '' || defect.name.toLowerCase().includes(searchTerm.toLowerCase()) || defect.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (selectedProject === '' || defect.project === selectedProject) &&
-      (selectedObject === '' || defect.object === selectedObject) &&
-      (selectedStatus === '' || defect.status === selectedStatus)
+      (searchTerm === '' || defect.title.toLowerCase().includes(searchTerm.toLowerCase()) || defect.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (selectedProject === '' || defect.project.name === selectedProject) &&
+      (selectedStage === '' || defect.stage?.name === selectedStage) &&
+      (selectedStatus === '' || defect.status.name === selectedStatus)
     );
   });
 
@@ -116,7 +161,7 @@ export default function DefectsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Дефекты</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+          <div className={`grid grid-cols-1 ${selectedProject ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 mb-6`}>
             <div className="relative">
               <input
                 type="text"
@@ -132,25 +177,30 @@ export default function DefectsPage() {
 
             <select
               value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
+              onChange={(e) => {
+                setSelectedProject(e.target.value);
+                setSelectedStage(''); // Reset stage when project changes
+              }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
             >
               <option value="">Все проекты</option>
               {projects.map((proj) => (
-                <option key={proj} value={proj}>{proj}</option>
+                <option key={proj.id} value={proj.name}>{proj.name}</option>
               ))}
             </select>
 
-            <select
-              value={selectedObject}
-              onChange={(e) => setSelectedObject(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-            >
-              <option value="">Все объекты</option>
-              {objects.map((obj) => (
-                <option key={obj} value={obj}>{obj}</option>
-              ))}
-            </select>
+            {selectedProject && (
+              <select
+                value={selectedStage}
+                onChange={(e) => setSelectedStage(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+              >
+                <option value="">Все стадии</option>
+                {projectStages.map((stage) => (
+                  <option key={stage} value={stage}>{stage}</option>
+                ))}
+              </select>
+            )}
 
             <select
               value={selectedStatus}
@@ -172,17 +222,17 @@ export default function DefectsPage() {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center space-x-3 flex-wrap gap-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{defect.name}</h4>
-                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(defect.status)}`}>
-                          {getStatusName(defect.status)}
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{defect.title}</h4>
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(defect.status.name)}`}>
+                          {getStatusName(defect.status.name)}
                         </span>
-                        <div className={`w-2 h-2 rounded-full ${getPriorityColor(defect.priority)}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${getPriorityColor(defect.priority.name)}`}></div>
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                        <span>Проект: {defect.project}</span>
-                        <span>Объект: {defect.object}</span>
-                        <span>Создан: {defect.created}</span>
-                        {defect.resolved && <span>Устранен: {defect.resolved}</span>}
+                        <span>Проект: {defect.project.name}</span>
+                        <span>Стадия: {defect.stage?.name || 'Не указана'}</span>
+                        <span>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</span>
+                        {defect.assignee && <span>Исполнитель: {defect.assignee.username}</span>}
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{defect.description}</p>
                     </div>

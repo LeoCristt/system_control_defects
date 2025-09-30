@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn } from 'typeorm';
 import { User } from '../users/user.entity';
+import { ProjectUser } from './project-user.entity';
+import { Defect } from '../defects/defect.entity';
 
 @Entity('projects')
 export class Project {
@@ -12,12 +14,11 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column()
-  manager_id: number;
+  @OneToMany(() => ProjectUser, projectUser => projectUser.project)
+  projectUsers: ProjectUser[];
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'manager_id' })
-  manager: User;
+  @OneToMany(() => Defect, defect => defect.project)
+  defects: Defect[];
 
   @CreateDateColumn()
   created_at: Date;

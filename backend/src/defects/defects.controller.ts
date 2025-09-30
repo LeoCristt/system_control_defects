@@ -1,14 +1,153 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Req, Param, NotFoundException, UseInterceptors, UploadedFile, Body } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import type { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+import { Defect } from './defect.entity';
+import { Project } from '../projects/project.entity';
+import { ProjectUser } from '../projects/project-user.entity';
 import { DefectsService } from './defects.service';
+import { AttachmentsService } from '../attachments/attachments.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('defects')
 export class DefectsController {
-  constructor(private readonly defectsService: DefectsService) {}
+  constructor(
+    @InjectRepository(Defect)
+    private defectsRepository: Repository<Defect>,
+    @InjectRepository(Project)
+    private projectsRepository: Repository<Project>,
+    @InjectRepository(ProjectUser)
+    private projectUsersRepository: Repository<ProjectUser>,
+    private defectsService: DefectsService,
+    private attachmentsService: AttachmentsService,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Get()
-  findAll() {
-    return this.defectsService.findAll();
+  async findAll(@Req() req: Request) {
+    const user = req.user!;
+
+    if (user.role === 'leader') {
+      const defects = await this.defectsRepository.find({
+        relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status'],
+      });
+      const projects = await this.projectsRepository.find();
+      return { defects, projects };
+    } else {
+      const userId = user.sub;
+      const projectUsers = await this.projectUsersRepository.find({
+        where: { user_id: userId, has_access: true },
+      });
+      const projectIds = projectUsers.map(pu => pu.project_id);
+
+      const projects = await this.projectsRepository.find({
+        where: { id: In(projectIds) },
+      });
+      const defects = await this.defectsRepository.find({
+        where: { project: { id: In(projectIds) } },
+        relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status'],
+      });
+
+      return { defects, projects };
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user!;
+    const defectId = parseInt(id, 10);
+
+    if (isNaN(defectId)) {
+      throw new NotFoundException('Invalid defect ID');
+    }
+
+    const defect = await this.defectsRepository.findOne({
+      where: { id: defectId },
+      relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status', 'attachments', 'attachments.uploaded_by'],
+    });
+
+    if (!defect) {
+      throw new NotFoundException('Defect not found');
+    }
+
+    // Check if user has access to this defect's project
+    if (user.role !== 'leader') {
+      const userId = user.sub;
+      const projectUser = await this.projectUsersRepository.findOne({
+        where: { user_id: userId, project_id: defect.project.id, has_access: true },
+      });
+
+      if (!projectUser) {
+        throw new NotFoundException('Access denied');
+      }
+    }
+
+    return defect;
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('create')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+        callback(null, filename);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      // Allow images and documents
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|pdf|doc|docx)$/)) {
+        return callback(new Error('Only image and document files are allowed!'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+  }))
+  async createWithAttachment(
+    @UploadedFile() file: any,
+    @Body() body: any,
+    @Req() req: Request,
+  ) {
+    const user = req.user!;
+
+    // Create the defect
+    const defect = await this.defectsService.create({
+      title: body.title,
+      description: body.description,
+      project_id: parseInt(body.project_id),
+      stage_id: body.stage_id ? parseInt(body.stage_id) : undefined,
+      creator_id: user.sub,
+      assignee_id: body.assignee_id ? parseInt(body.assignee_id) : undefined,
+      priority_id: parseInt(body.priority_id),
+      status_id: parseInt(body.status_id),
+      due_date: body.due_date,
+    });
+
+    // If a file was uploaded, create the attachment
+    if (file) {
+      const filePath = `/uploads/${file.filename}`;
+      await this.attachmentsService.create({
+        defectId: defect.id,
+        filePath,
+        fileName: file.originalname,
+        fileType: file.mimetype,
+        uploadedById: user.sub,
+      });
+    }
+
+    // Return the defect with attachments
+    return this.defectsRepository.findOne({
+      where: { id: defect.id },
+      relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status', 'attachments', 'attachments.uploaded_by'],
+    });
   }
 }
