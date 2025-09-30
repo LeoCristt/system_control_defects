@@ -1,9 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Project } from '../projects/project.entity';
 import { Stage } from '../stages/stage.entity';
 import { User } from '../users/user.entity';
 import { Priority } from '../priorities/priority.entity';
 import { Status } from '../statuses/status.entity';
+import { Attachment } from '../attachments/attachment.entity';
 
 @Entity('defects')
 export class Defect {
@@ -42,6 +43,9 @@ export class Defect {
 
   @Column({ type: 'date', nullable: true })
   due_date: string | null;
+
+  @OneToMany(() => Attachment, attachment => attachment.defect)
+  attachments: Attachment[];
 
   @CreateDateColumn()
   created_at: Date;
