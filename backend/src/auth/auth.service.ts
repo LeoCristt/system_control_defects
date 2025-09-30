@@ -1,4 +1,3 @@
-
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -22,7 +21,7 @@ export class AuthService {
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();
     }
-    const payload = { sub: user.id, username: user.username, email: user.email, role: user.role };
+    const payload = { sub: user.id, username: user.username, email: user.email, role: user.role?.name || 'engineer' };
     return {
       access_token: await this.jwtService.signAsync(payload, { expiresIn: '15m' }),
       refresh_token: await this.jwtService.signAsync(payload, { expiresIn: '7d', secret: jwtConstants.refreshSecret }),
@@ -59,5 +58,3 @@ export class AuthService {
     }
   }
 }
-
-

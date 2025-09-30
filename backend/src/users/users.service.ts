@@ -2,7 +2,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserRole } from './user.entity';
+import { User } from './user.entity';
+import { RolesService } from '../roles/roles.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -10,20 +11,27 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private rolesService: RolesService,
   ) {}
 
   async findOne(email: string): Promise<User | undefined> {
-    const user = await this.usersRepository.findOne({ where: { email } });
+    const user = await this.usersRepository.findOne({ where: { email }, relations: ['role'] });
     return user || undefined;
   }
 
-  async create(email: string, username: string, password: string, role?: UserRole): Promise<User> {
+  async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
+    let roleId = 2; // default engineer
+    if (roleName) {
+      const role = await this.rolesService.findOneByName(roleName);
+      if (role) roleId = role.id;
+    }
     const user = this.usersRepository.create({
       email,
       username,
       password: hashedPassword,
-      role: role || UserRole.ENGINEER,
+      role_id: roleId,
+      full_name: full_name || username,
     });
     return this.usersRepository.save(user);
   }

@@ -16,7 +16,6 @@ import { Roles } from './roles.decorator';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './register.dto';
-import { UserRole } from '../users/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -43,8 +42,7 @@ export class AuthController {
     return this.authService.refresh(refreshToken);
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.LEADER)
+  @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
@@ -52,15 +50,15 @@ export class AuthController {
       throw new BadRequestException('Требуются email, имя пользователя и пароль');
     }
 
-    if (registerDto.role === 'leader') {
+    if (registerDto.role === 'руководитель') {
       throw new BadRequestException('Невозможно выдать роль руководителя(обратитесь к разработчикам)');
     }
 
     try {
-      const user = await this.usersService.create(registerDto.email, registerDto.username, registerDto.password, registerDto.role);
+      const user = await this.usersService.create(registerDto.email, registerDto.username, registerDto.password, registerDto.role, registerDto.full_name);
       return {
         message: 'Пользователь успешно зарегистрирован',
-        user: { id: user.id, email: user.email, username: user.username, role: user.role }
+        user: { id: user.id, email: user.email, username: user.username, role: user.role?.name }
       };
     } catch (error) {
       if (error.code === '23505') {
