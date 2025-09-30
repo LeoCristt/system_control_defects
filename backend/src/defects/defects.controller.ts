@@ -109,7 +109,7 @@ export class DefectsController {
       callback(null, true);
     },
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
+      fileSize: 10 * 1024 * 1024, 
     },
   }))
   async createWithAttachment(

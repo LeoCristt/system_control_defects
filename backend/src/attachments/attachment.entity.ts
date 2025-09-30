@@ -17,7 +17,7 @@ export class Attachment {
   @Column({ type: 'varchar', length: 100 })
   file_name: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   file_type: string | null;
 
   @ManyToOne(() => User)

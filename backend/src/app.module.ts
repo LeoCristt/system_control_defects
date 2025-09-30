@@ -63,5 +63,6 @@ import { ProjectUser } from './projects/project-user.entity';
   ],
   controllers: [AppController],
   providers: [AppService],
-})
+}
+)
 export class AppModule {}
