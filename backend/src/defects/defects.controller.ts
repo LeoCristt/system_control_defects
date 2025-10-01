@@ -146,7 +146,7 @@ export class DefectsController {
       callback(null, true);
     },
     limits: {
-      fileSize: 10 * 1024 * 1024, 
+      fileSize: 10 * 1024 * 1024,
     },
   }))
   async createWithAttachment(
@@ -156,11 +156,27 @@ export class DefectsController {
   ) {
     const user = req.user!;
 
+    // Check if user is engineer
+    if (user.role !== 'engineer') {
+      throw new NotFoundException('Access denied');
+    }
+
+    const projectId = parseInt(body.project_id);
+
+    // Check if user has access to the project
+    const projectUser = await this.projectUsersRepository.findOne({
+      where: { user_id: user.sub, project_id: projectId, has_access: true },
+    });
+
+    if (!projectUser) {
+      throw new NotFoundException('Access denied');
+    }
+
     // Create the defect
     const defect = await this.defectsService.create({
       title: body.title,
       description: body.description,
-      project_id: parseInt(body.project_id),
+      project_id: projectId,
       stage_id: body.stage_id ? parseInt(body.stage_id) : undefined,
       creator_id: user.sub,
       assignee_id: body.assignee_id ? parseInt(body.assignee_id) : undefined,

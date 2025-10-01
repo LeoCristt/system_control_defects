@@ -49,11 +49,8 @@ export default function CreateDefectPage() {
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [projectsRes, stagesRes, prioritiesRes, statusesRes] = await Promise.all([
+        const [projectsRes, prioritiesRes, statusesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/projects`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
-          }),
-          fetch(`${API_BASE_URL}/stages`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
           }),
           fetch(`${API_BASE_URL}/priorities`, {
@@ -65,7 +62,6 @@ export default function CreateDefectPage() {
         ]);
 
         if (projectsRes.ok) setProjects(await projectsRes.json());
-        if (stagesRes.ok) setStages(await stagesRes.json());
         if (prioritiesRes.ok) setPriorities(await prioritiesRes.json());
         if (statusesRes.ok) setStatuses(await statusesRes.json());
       } catch (err) {
@@ -76,9 +72,32 @@ export default function CreateDefectPage() {
     fetchOptions();
   }, []);
 
+  const fetchStages = async (projectId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/stages?project_id=${projectId}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+      });
+      if (response.ok) {
+        setStages(await response.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch stages:', err);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, project_id: value, stage_id: '' }));
+    if (value) {
+      fetchStages(value);
+    } else {
+      setStages([]);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,7 +180,7 @@ export default function CreateDefectPage() {
                   id="project_id"
                   name="project_id"
                   value={formData.project_id}
-                  onChange={handleInputChange}
+                  onChange={handleProjectChange}
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
                 >
