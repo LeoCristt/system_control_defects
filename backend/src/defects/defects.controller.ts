@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Req, Param, NotFoundException, UseInterceptors, UploadedFile, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, UseGuards, Req, Param, NotFoundException, UseInterceptors, UploadedFile, Body } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import type { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -87,6 +87,43 @@ export class DefectsController {
     }
 
     return defect;
+  }
+
+  @UseGuards(AuthGuard)
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() body: any, @Req() req: Request) {
+    const user = req.user!;
+    const defectId = parseInt(id, 10);
+
+    if (isNaN(defectId)) {
+      throw new NotFoundException('Invalid defect ID');
+    }
+
+    // Check if user has access to this defect's project
+    const defect = await this.defectsRepository.findOne({
+      where: { id: defectId },
+      relations: ['project'],
+    });
+
+    if (!defect) {
+      throw new NotFoundException('Defect not found');
+    }
+
+    if (user.role !== 'leader') {
+      const userId = user.sub;
+      const projectUser = await this.projectUsersRepository.findOne({
+        where: { user_id: userId, project_id: defect.project.id, has_access: true },
+      });
+
+      if (!projectUser) {
+        throw new NotFoundException('Access denied');
+      }
+    }
+
+    return this.defectsService.update(defectId, {
+      status_id: body.status_id ? parseInt(body.status_id) : undefined,
+      // Add other fields if needed
+    });
   }
 
   @UseGuards(AuthGuard)

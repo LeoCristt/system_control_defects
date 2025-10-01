@@ -54,6 +54,7 @@ export default function DefectsPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
@@ -61,11 +62,21 @@ export default function DefectsPage() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (err) {
+        console.error('Failed to decode token:', err);
+      }
+    }
+
     const fetchDefects = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/defects`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
 
@@ -131,18 +142,18 @@ export default function DefectsPage() {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      open: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+      'Новый': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      'В работе': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      'Закрыт': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
   };
 
   const getStatusName = (status: string) => {
     const names = {
-      open: 'Открыт',
-      in_progress: 'В работе',
-      resolved: 'Устранен'
+      'Новый': 'Открыт',
+      'В работе': 'В работе',
+      'Закрыт': 'Устранен'
     };
     return names[status as keyof typeof names] || status;
   };
@@ -162,12 +173,14 @@ export default function DefectsPage() {
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Дефекты</h2>
-            <button
-              onClick={() => router.push('/defects/create')}
-              className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              Создать дефект
-            </button>
+            {userRole === 'engineer' && (
+              <button
+                onClick={() => router.push('./defects/create')}
+                className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Создать дефект
+              </button>
+            )}
           </div>
           <div className={`grid grid-cols-1 ${selectedProject ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 mb-6`}>
             <div className="relative">
@@ -226,7 +239,7 @@ export default function DefectsPage() {
             {filteredDefects.length > 0 ? (
               filteredDefects.map((defect) => (
                 <div key={defect.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 cursor-pointer"
-                onClick={() => router.push(`/defects/${defect.id}/edit`)}>
+                onClick={() => router.push(`./defects/${defect.id}/edit`)}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center space-x-3 flex-wrap gap-2">

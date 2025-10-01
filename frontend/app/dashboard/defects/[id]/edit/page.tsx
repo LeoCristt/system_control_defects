@@ -1,149 +1,161 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-// import * as XLSX from 'xlsx'; 
+
 export default function DefectDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const defectId = params.id;
 
-  const [defect, setDefect] = useState({
-    id: defectId,
-    name: 'Трещина в стене',
-    project: 'ЖК "Северная звезда"',
-    object: 'Корпус 1',
-    status: 'open',
-    priority: 'high',
-    description: 'Обнаружена трещина в несущей стене на 5 этаже.',
-    created: '2025-09-01',
-    resolved: null,
-    image: 'https://avatars.mds.yandex.net/i?id=07a48e113fba56537f3cfe6ab254a196467ff955-16487560-images-thumbs&n=13' // Placeholder image URL
-  });
-
-  const [comments, setComments] = useState([
-    { id: 1, author: 'Leo Crist', text: 'Нужно срочно проверить конструкцию.', date: '2025-09-02' },
-    { id: 2, author: 'Инженер Иванов', text: 'Проведена инспекция, трещина не критична.', date: '2025-09-05' },
-  ]);
-
+  const [defect, setDefect] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [newStatus, setNewStatus] = useState(defect.status);
+  const [newStatus, setNewStatus] = useState('');
 
-  const handleStatusChange = (e) => {
+  useEffect(() => {
+    const fetchDefect = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch defect');
+        }
+        const data = await response.json();
+        setDefect(data);
+        setNewStatus(data.status.name);
+        // Assuming comments are part of defect or fetched separately
+        setComments(data.comments || []);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchDefect();
+  }, [defectId]);
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setNewStatus(e.target.value);
   };
 
-  const updateStatus = () => {
-    setDefect(prev => ({ ...prev, status: newStatus }));
-    // потом бек напишу
-    console.log('Updated status:', newStatus);
+  const updateStatus = async () => {
+    if (!defect) return;
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({ status_id: newStatus }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+      const updatedDefect = await response.json();
+      setDefect(updatedDefect);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const addComment = (e) => {
+  const addComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
       const newCom = {
         id: comments.length + 1,
-        author: 'Current User', // инфа о юзере
+        author: 'Current User', // Replace with actual user info
         text: newComment,
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
       };
       setComments(prev => [...prev, newCom]);
       setNewComment('');
-      // бек
+      // TODO: Send comment to backend
     }
   };
 
-  const exportToExcel = () => {
-    const data = [
-      ['ID', defect.id],
-      ['Название', defect.name],
-      ['Проект', defect.project],
-      ['Объект', defect.object],
-      ['Статус', getStatusName(defect.status)],
-      ['Приоритет', defect.priority],
-      ['Описание', defect.description],
-      ['Дата создания', defect.created],
-      ['Дата устранения', defect.resolved || 'Не устранено'],
-    ];
-
-    // const ws = XLSX.utils.aoa_to_sheet(data);
-    // const wb = XLSX.utils.book_new();
-    // XLSX.utils.book_append_sheet(wb, ws, 'Defect');
-    // XLSX.writeFile(wb, `defect_${defect.id}.xlsx`);
-  };
-
   const getStatusColor = (status: string) => {
-    const colors = {
-      open: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    const colors: Record<string, string> = {
+      'Новый': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      'В работе': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      'Закрыт': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
   };
 
   const getStatusName = (status: string) => {
-    const names = {
-      open: 'Открыт',
-      in_progress: 'В работе',
-      resolved: 'Устранен'
+    const names: Record<string, string> = {
+      'Новый': 'Открыт',
+      'В работе': 'В работе',
+      'Закрыт': 'Устранен',
     };
-    return names[status as keyof typeof names] || status;
+    return names[status] || status;
   };
 
   const getPriorityColor = (priority: string) => {
-    const colors = {
-      high: 'text-red-500',
-      medium: 'text-yellow-500',
-      low: 'text-green-500'
+    const colors: Record<string, string> = {
+      'Высокий': 'text-red-500',
+      'Средний': 'text-yellow-500',
+      'Низкий': 'text-green-500',
     };
-    return colors[priority as keyof typeof colors];
+    return colors[priority] || '';
   };
+
+  if (!defect) {
+    return (
+      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Загрузка...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Дефекта #{defect.id}: {defect.name}</h2>
-            <button
-              onClick={exportToExcel}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              Экспорт в Excel
-            </button>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Дефект #{defect.id}: {defect.title}</h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="flex flex-col items-center space-y-4">
-                <img
-                  src={defect.image}
-                  alt="Фото дефекта"
-                  className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700"
-                />
+                {defect.attachments && defect.attachments.length > 0 ? (
+                  <img
+                    src={defect.attachments[0].filePath}
+                    alt="Фото дефекта"
+                    className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700"
+                  />
+                ) : (
+                  <div className="w-48 h-48 rounded-lg border-4 border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-600">
+                    Нет фото
+                  </div>
+                )}
                 <p className="text-sm text-gray-600 dark:text-gray-400">Фото дефекта</p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Название</label>
-                  <p className="text-gray-900 dark:text-white">{defect.name}</p>
+                  <p className="text-gray-900 dark:text-white">{defect.title}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Проект</label>
-                  <p className="text-gray-900 dark:text-white">{defect.project}</p>
+                  <p className="text-gray-900 dark:text-white">{defect.project.name}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Объект</label>
-                  <p className="text-gray-900 dark:text-white">{defect.object}</p>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Стадия</label>
+                  <p className="text-gray-900 dark:text-white">{defect.stage ? defect.stage.name : 'Не указана'}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Приоритет</label>
-                  <p className={`font-medium ${getPriorityColor(defect.priority)}`}>{defect.priority}</p>
+                  <p className={`font-medium ${getPriorityColor(defect.priority.name)}`}>{defect.priority.name}</p>
                 </div>
               </div>
             </div>
@@ -151,8 +163,8 @@ export default function DefectDetailsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Текущий статус</label>
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(defect.status)}`}>
-                  {getStatusName(defect.status)}
+                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(defect.status.name)}`}>
+                  {getStatusName(defect.status.name)}
                 </span>
               </div>
 
@@ -165,9 +177,9 @@ export default function DefectDetailsPage() {
                     onChange={handleStatusChange}
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
                   >
-                    <option value="open">Открыт</option>
-                    <option value="in_progress">В работе</option>
-                    <option value="resolved">Устранен</option>
+                    <option value="1">Новый</option>
+                    <option value="2">В работе</option>
+                    <option value="3">Закрыт</option>
                   </select>
                   <button
                     onClick={updateStatus}
@@ -186,12 +198,12 @@ export default function DefectDetailsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата создания</label>
-                  <p className="text-gray-900 dark:text-white">{defect.created}</p>
+                  <p className="text-gray-900 dark:text-white">{new Date(defect.created_at).toLocaleDateString('ru-RU')}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата устранения</label>
-                  <p className="text-gray-900 dark:text-white">{defect.resolved || 'Не устранено'}</p>
+                  <p className="text-gray-900 dark:text-white">{defect.due_date ? new Date(defect.due_date).toLocaleDateString('ru-RU') : 'Не устранено'}</p>
                 </div>
               </div>
             </div>
@@ -200,7 +212,7 @@ export default function DefectDetailsPage() {
           <div className="mt-8">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Комментарии</h3>
             <div className="space-y-4 mb-6">
-              {comments.map((comment) => (
+              {comments.length > 0 ? comments.map((comment) => (
                 <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-900 dark:text-white">{comment.author}</span>
@@ -208,8 +220,7 @@ export default function DefectDetailsPage() {
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{comment.text}</p>
                 </div>
-              ))}
-              {comments.length === 0 && <p className="text-center text-gray-600 dark:text-gray-400">Нет комментариев.</p>}
+              )) : <p className="text-center text-gray-600 dark:text-gray-400">Нет комментариев.</p>}
             </div>
 
             <form onSubmit={addComment} className="flex space-x-2">
