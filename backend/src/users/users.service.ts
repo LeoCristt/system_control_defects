@@ -23,12 +23,19 @@ export class UsersService {
     return this.usersRepository.find({ relations: ['role'] });
   }
 
-  async findEngineers(): Promise<User[]> {
-    return this.usersRepository
+  async findEngineers(projectId?: number): Promise<User[]> {
+    const query = this.usersRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
-      .where('role.name = :roleName', { roleName: 'engineer' })
-      .getMany();
+      .where('role.name = :roleName', { roleName: 'engineer' });
+
+    if (projectId) {
+      query
+        .leftJoin('user.projectUsers', 'pu')
+        .andWhere('pu.project_id = :projectId AND pu.has_access = true', { projectId });
+    }
+
+    return query.getMany();
   }
 
   async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {

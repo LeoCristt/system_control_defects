@@ -38,9 +38,14 @@ export default function DefectDetailsPage() {
       }
     };
 
+    fetchDefect();
+  }, [defectId]);
+
+  useEffect(() => {
     const fetchUsers = async () => {
+      if (!defect) return;
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/engineers`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/engineers?project_id=${defect.project.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           },
@@ -54,9 +59,8 @@ export default function DefectDetailsPage() {
       }
     };
 
-    fetchDefect();
     fetchUsers();
-  }, [defectId]);
+  }, [defect]);
 
   const updateDefect = async () => {
     if (!defect) return;

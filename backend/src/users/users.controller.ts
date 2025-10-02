@@ -25,6 +25,7 @@ export class UsersController {
     if (!['leader', 'manager'].includes(user.role)) {
       throw new Error('Access denied');
     }
-    return this.usersService.findEngineers();
+    const projectId = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
+    return this.usersService.findEngineers(projectId);
   }
 }
