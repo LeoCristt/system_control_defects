@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Param } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import { ProjectsService } from './projects.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +34,29 @@ export class ProjectsController {
       return this.projectsRepository.find({
         where: { id: In(projectIds) },
       });
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user!;
+    const projectId = parseInt(id, 10);
+
+    if (isNaN(projectId)) {
+      return null;
+    }
+
+    if (user.role === 'leader') {
+      return this.projectsRepository.findOne({ where: { id: projectId } });
+    } else {
+      const projectUser = await this.projectUsersRepository.findOne({
+        where: { user_id: user.sub, project_id: projectId, has_access: true },
+      });
+      if (!projectUser) {
+        return null;
+      }
+      return this.projectsRepository.findOne({ where: { id: projectId } });
     }
   }
 }
