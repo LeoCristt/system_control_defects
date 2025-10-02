@@ -238,30 +238,49 @@ export default function DefectsPage() {
 
           <div className="grid grid-cols-1 gap-4">
             {filteredDefects.length > 0 ? (
-              filteredDefects.map((defect) => (
-                <div key={defect.id} className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 ${userRole === 'manager' ? 'cursor-pointer' : ''}`}
-                onClick={userRole === 'manager' ? () => router.push(`./defects/${defect.id}/edit`) : undefined}>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center space-x-3 flex-wrap gap-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{defect.title}</h4>
-                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(defect.status.name)}`}>
-                          {getStatusName(defect.status.name)}
-                        </span>
-                        <div className={`w-2 h-2 rounded-full ${getPriorityColor(defect.priority.name)}`}></div>
+              filteredDefects.map((defect) => {
+                // Determine if user is author or assignee
+                const token = localStorage.getItem('access_token');
+                let userId = null;
+                let userRoleLocal = null;
+                if (token) {
+                  try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    userId = payload.sub;
+                    userRoleLocal = payload.role;
+                  } catch (error) {
+                    console.error(error);
+                  }
+                }
+                const canEdit = userRoleLocal === 'manager' || defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId);
+                return (
+                  <div
+                    key={defect.id}
+                    className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 ${canEdit ? 'cursor-pointer' : ''}`}
+                    onClick={canEdit ? () => router.push(`./defects/${defect.id}/edit`) : undefined}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center space-x-3 flex-wrap gap-2">
+                          <h4 className="font-semibold text-gray-900 dark:text-white">{defect.title}</h4>
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(defect.status.name)}`}>
+                            {getStatusName(defect.status.name)}
+                          </span>
+                          <div className={`w-2 h-2 rounded-full ${getPriorityColor(defect.priority.name)}`}></div>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                          <span>Проект: {defect.project.name}</span>
+                          <span>Стадия: {defect.stage?.name || 'Не указана'}</span>
+                          <span>Автор: {defect.creator.full_name}</span>
+                          <span>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</span>
+                          {defect.assignee && <span>Исполнитель: {defect.assignee.username}</span>}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{defect.description}</p>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                        <span>Проект: {defect.project.name}</span>
-                        <span>Стадия: {defect.stage?.name || 'Не указана'}</span>
-                        <span>Автор: {defect.creator.full_name}</span>
-                        <span>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</span>
-                        {defect.assignee && <span>Исполнитель: {defect.assignee.username}</span>}
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{defect.description}</p>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-center text-gray-600 dark:text-gray-400">Нет дефектов, соответствующих фильтрам.</p>
             )}

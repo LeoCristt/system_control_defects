@@ -54,12 +54,12 @@ export class DefectsService {
     priority_id: number;
     status_id: number;
     due_date: string;
-  }>): Promise<Defect> {
+  }>, userId?: number): Promise<Defect> {
     // If status_id is provided, validate the transition
     if (data.status_id) {
       const currentDefect = await this.defectsRepository.findOne({
         where: { id },
-        relations: ['status'],
+        relations: ['status', 'assignee'],
       });
       if (!currentDefect) {
         throw new Error('Defect not found');
@@ -68,8 +68,18 @@ export class DefectsService {
       if (!newStatus) {
         throw new Error('Invalid status ID');
       }
-      if (currentDefect.status.name !== 'Новый' || newStatus.name !== 'В работе') {
-        throw new Error('Status can only be changed from "Новый" to "В работе"');
+      // Allow status change from "Новый" to "В работе" (by anyone with access)
+      if (currentDefect.status.name === 'Новый' && newStatus.name === 'В работе') {
+        // Allowed
+      }
+      // Allow status change from "В работе" to "На проверке" only by assignee
+      else if (currentDefect.status.name === 'В работе' && newStatus.name === 'На проверке') {
+        if (!userId || !currentDefect.assignee || currentDefect.assignee.id !== userId) {
+          throw new Error('Only the assigned engineer can change status to "На проверке"');
+        }
+      }
+      else {
+        throw new Error('Invalid status transition');
       }
     }
 

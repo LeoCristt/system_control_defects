@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -31,8 +32,6 @@ export default function DefectDetailsPage() {
         setDefect(data);
         setAssigneeId(data.assignee ? data.assignee.id : '');
         setDueDate(data.due_date || '');
-        // Assuming comments are part of defect or fetched separately
-        setComments(data.comments || []);
       } catch (error) {
         console.error(error);
       }
@@ -42,17 +41,50 @@ export default function DefectDetailsPage() {
   }, [defectId]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (!defect) return;
+    const fetchComments = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/engineers?project_id=${defect.project.id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/comments/${defectId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           },
         });
         if (response.ok) {
           const data = await response.json();
-          setUsers(data);
+          setComments(data.map((c: any) => ({
+            id: c.id,
+            author: c.user.full_name || c.user.username,
+            text: c.content,
+            date: new Date(c.created_at).toISOString().split('T')[0],
+          })));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    if (defectId) {
+      fetchComments();
+    }
+  }, [defectId]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!defect) return;
+      // Decode token to check role
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role === 'manager') {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/engineers?project_id=${defect.project.id}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUsers(data);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -62,13 +94,13 @@ export default function DefectDetailsPage() {
     fetchUsers();
   }, [defect]);
 
-  const updateDefect = async () => {
+  const updateDefect = async (newStatusId?: number) => {
     if (!defect) return;
     try {
       const body: any = {};
       if (assigneeId) body.assignee_id = assigneeId;
       if (dueDate) body.due_date = dueDate;
-      body.status_id = 2; // В работе
+      if (newStatusId) body.status_id = newStatusId;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}`, {
         method: 'PUT',
@@ -88,18 +120,43 @@ export default function DefectDetailsPage() {
     }
   };
 
-  const addComment = (e: React.FormEvent) => {
+  const changeStatusToInWork = async () => {
+    await updateDefect(2); // В работе
+  };
+
+  const changeStatusToOnCheck = async () => {
+    await updateDefect(3); // На проверке
+  };
+
+  const addComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
-      const newCom = {
-        id: comments.length + 1,
-        author: 'Current User', // Replace with actual user info
-        text: newComment,
-        date: new Date().toISOString().split('T')[0],
-      };
-      setComments(prev => [...prev, newCom]);
-      setNewComment('');
-      // TODO: Send comment to backend
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+          body: JSON.stringify({
+            defect_id: parseInt(defectId as string, 10),
+            content: newComment,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to add comment');
+        }
+        const createdComment = await response.json();
+        setComments(prev => [...prev, {
+          id: createdComment.id,
+          author: createdComment.user.full_name || createdComment.user.username,
+          text: createdComment.content,
+          date: new Date(createdComment.created_at).toISOString().split('T')[0],
+        }]);
+        setNewComment('');
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -193,48 +250,84 @@ export default function DefectDetailsPage() {
                   {getStatusName(defect.status.name)}
                 </span>
               </div>
+              {defect.status.name === 'Новый' && (() => {
+                // Decode token to check if user is manager
+                const token = localStorage.getItem('access_token');
+                if (!token) return null;
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  if (payload.role === 'manager') {
+                    return (
+                      <>
+                        <div>
+                          <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Назначить исполнителя</label>
+                          <select
+                            id="assignee"
+                            value={assigneeId}
+                            onChange={(e) => setAssigneeId(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                          >
+                            <option value="">Не назначен</option>
+                            {users.map((user) => (
+                              <option key={user.id} value={user.id}>{user.full_name || user.username}</option>
+                            ))}
+                          </select>
+                        </div>
 
-              {defect.status.name === 'Новый' && (
-                <div>
-                  <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Назначить исполнителя</label>
-                  <select
-                    id="assignee"
-                    value={assigneeId}
-                    onChange={(e) => setAssigneeId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-                  >
-                    <option value="">Не назначен</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>{user.full_name || user.username}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                        <div>
+                          <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Сроки выполнения</label>
+                          <input
+                            type="date"
+                            id="dueDate"
+                            value={dueDate}
+                            onChange={(e) => setDueDate(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                          />
+                        </div>
 
-              {defect.status.name === 'Новый' && (
-                <div>
-                  <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Сроки выполнения</label>
-                  <input
-                    type="date"
-                    id="dueDate"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-                  />
-                </div>
-              )}
+                        <div>
+                          <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "В работе"</label>
+                          <button
+                            onClick={changeStatusToInWork}
+                            className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Назначить и изменить статус
+                          </button>
+                        </div>
+                      </>
+                    );
+                  }
+                } catch (error) {
+                  console.error(error);
+                }
+                return null;
+              })()}
 
-              {defect.status.name === 'Новый' && (
-                <div>
-                  <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "В работе"</label>
-                  <button
-                    onClick={updateDefect}
-                    className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Назначить и изменить статус
-                  </button>
-                </div>
-              )}
+              {defect.status.name === 'В работе' && (() => {
+                // Decode token to check if user is the assignee
+                const token = localStorage.getItem('access_token');
+                if (!token) return null;
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  const userId = payload.sub;
+                  if (defect.assignee && defect.assignee.id === userId) {
+                    return (
+                      <div>
+                        <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "На проверке"</label>
+                        <button
+                          onClick={changeStatusToOnCheck}
+                          className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Изменить статус
+                        </button>
+                      </div>
+                    );
+                  }
+                } catch (error) {
+                  console.error(error);
+                }
+                return null;
+              })()}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Описание</label>

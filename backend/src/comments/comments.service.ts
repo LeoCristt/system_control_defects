@@ -13,4 +13,21 @@ export class CommentsService {
   findAll(): Promise<Comment[]> {
     return this.commentsRepository.find();
   }
+
+  async create(data: { defect_id: number; user_id: number; content: string }): Promise<Comment> {
+    const comment = this.commentsRepository.create({
+      defect: { id: data.defect_id } as any,
+      user: { id: data.user_id } as any,
+      content: data.content,
+    });
+    return this.commentsRepository.save(comment);
+  }
+
+  async findByDefectId(defectId: number): Promise<Comment[]> {
+    return this.commentsRepository.find({
+      where: { defect: { id: defectId } },
+      relations: ['user'],
+      order: { created_at: 'ASC' },
+    });
+  }
 }

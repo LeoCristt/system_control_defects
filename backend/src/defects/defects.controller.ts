@@ -74,16 +74,28 @@ export class DefectsController {
       throw new NotFoundException('Defect not found');
     }
 
-    // Check if user has access to this defect's project
-    if (user.role !== 'leader') {
-      const userId = user.sub;
+    // Check if user has access to this defect's project or is creator/assignee
+    const userId = user.sub;
+    let hasAccess = false;
+
+    if (user.role === 'leader') {
+      hasAccess = true;
+    } else {
+      // Check project access
       const projectUser = await this.projectUsersRepository.findOne({
         where: { user_id: userId, project_id: defect.project.id, has_access: true },
       });
-
-      if (!projectUser) {
-        throw new NotFoundException('Access denied');
+      if (projectUser) {
+        hasAccess = true;
       }
+      // Allow creator and assignee access
+      if (defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId)) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      throw new NotFoundException('Access denied');
     }
 
     return defect;
@@ -99,32 +111,44 @@ export class DefectsController {
       throw new NotFoundException('Invalid defect ID');
     }
 
-    // Check if user has access to this defect's project
+    // Check if user has access to this defect's project or is creator/assignee
     const defect = await this.defectsRepository.findOne({
       where: { id: defectId },
-      relations: ['project'],
+      relations: ['project', 'creator', 'assignee'],
     });
 
     if (!defect) {
       throw new NotFoundException('Defect not found');
     }
 
-    if (user.role !== 'leader') {
-      const userId = user.sub;
+    const userId = user.sub;
+    let hasAccess = false;
+
+    if (user.role === 'leader') {
+      hasAccess = true;
+    } else {
+      // Check project access
       const projectUser = await this.projectUsersRepository.findOne({
         where: { user_id: userId, project_id: defect.project.id, has_access: true },
       });
-
-      if (!projectUser) {
-        throw new NotFoundException('Access denied');
+      if (projectUser) {
+        hasAccess = true;
       }
+      // Allow creator and assignee access for status changes and comments
+      if (defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId)) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      throw new NotFoundException('Access denied');
     }
 
     return this.defectsService.update(defectId, {
       status_id: body.status_id ? parseInt(body.status_id) : undefined,
       assignee_id: body.assignee_id ? parseInt(body.assignee_id) : undefined,
       due_date: body.due_date || undefined,
-    });
+    }, userId);
   }
 
   @UseGuards(AuthGuard)
