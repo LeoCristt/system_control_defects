@@ -16,6 +16,8 @@ export default function DefectDetailsPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchDefect = async () => {
@@ -154,6 +156,30 @@ export default function DefectDetailsPage() {
     }
   };
 
+  const uploadReport = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', `Отчёт по дефекту #${defectId}`);
+      formData.append('defect_id', defectId as string);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/reports`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error('Failed to upload report');
+      }
+      alert('Отчёт успешно загружен');
+    } catch (error) {
+      console.error('Error uploading report:', error);
+      alert('Ошибка при загрузке отчёта');
+    }
+  };
+
   const addComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -234,7 +260,7 @@ export default function DefectDetailsPage() {
               <div className="flex flex-col items-center space-y-4">
                 {defect.attachments && defect.attachments.length > 0 ? (
                   <img
-                    src={defect.attachments[0].filePath}
+                    src={`http://localhost:3001${defect.attachments[0].file_path}`}
                     alt="Фото дефекта"
                     className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700"
                   />
@@ -388,15 +414,26 @@ export default function DefectDetailsPage() {
                   const payload = JSON.parse(atob(token.split('.')[1]));
                   if (payload.role === 'manager') {
                     return (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Создать отчёт</label>
-                        <button
-                          onClick={generateReport}
-                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                        >
-                          Скачать отчёт Excel
-                        </button>
-                      </div>
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Создать отчёт</label>
+                          <button
+                            onClick={generateReport}
+                            className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Скачать отчёт Excel
+                          </button>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Загрузить отчёт</label>
+                          <button
+                            onClick={() => setShowUploadModal(true)}
+                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Загрузить отчёт
+                          </button>
+                        </div>
+                      </>
                     );
                   }
                 } catch (error) {
@@ -465,6 +502,50 @@ export default function DefectDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Загрузить отчёт</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Выберите файл</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.pdf,.doc,.docx"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={async () => {
+                    if (selectedFile) {
+                      await uploadReport(selectedFile);
+                      setShowUploadModal(false);
+                      setSelectedFile(null);
+                    }
+                  }}
+                  disabled={!selectedFile}
+                  className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Отправить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

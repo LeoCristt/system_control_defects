@@ -243,14 +243,31 @@ export class DefectsController {
     // Attachments
     if (defect.attachments && defect.attachments.length > 0) {
       worksheet.getCell('A18').value = 'Прикрепленные файлы:';
-      worksheet.mergeCells('A18:E18');
+      worksheet.mergeCells('A18:F18');
       worksheet.getCell('A18').font = { bold: true };
 
+      // Headers for attachments table
+      worksheet.getCell('A19').value = 'Имя файла';
+      worksheet.getCell('B19').value = 'Тип';
+      worksheet.getCell('C19').value = 'Загружен';
+      worksheet.getCell('D19').value = 'Дата';
+      worksheet.getCell('E19').value = 'Ссылка';
+      worksheet.getRow(19).font = { bold: true };
+
       defect.attachments.forEach((attachment, index) => {
-        worksheet.getCell(`A${19 + index}`).value = attachment.fileName;
-        worksheet.getCell(`B${19 + index}`).value = attachment.fileType;
-        worksheet.getCell(`C${19 + index}`).value = attachment.uploaded_by ? (attachment.uploaded_by.full_name || attachment.uploaded_by.username) : 'Неизвестно';
-        worksheet.getCell(`D${19 + index}`).value = new Date(attachment.created_at).toLocaleDateString('ru-RU');
+        const rowNum = 20 + index;
+        worksheet.getCell(`A${rowNum}`).value = attachment.file_name;
+        worksheet.getCell(`B${rowNum}`).value = attachment.file_type;
+        worksheet.getCell(`C${rowNum}`).value = attachment.uploaded_by ? (attachment.uploaded_by.full_name || attachment.uploaded_by.username) : 'Неизвестно';
+        worksheet.getCell(`D${rowNum}`).value = new Date(attachment.created_at).toLocaleDateString('ru-RU');
+
+        // Add hyperlink to the file
+        const fileUrl = `http://localhost:3001${attachment.file_path}`;
+        worksheet.getCell(`E${rowNum}`).value = {
+          text: 'Открыть файл',
+          hyperlink: fileUrl,
+        };
+        worksheet.getCell(`E${rowNum}`).font = { color: { argb: 'FF0000FF' }, underline: true };
       });
     }
 
@@ -286,6 +303,7 @@ export class DefectsController {
     worksheet.getColumn('C').width = 20;
     worksheet.getColumn('D').width = 15;
     worksheet.getColumn('E').width = 15;
+    worksheet.getColumn('F').width = 15;
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

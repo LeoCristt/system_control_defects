@@ -44,7 +44,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-title" content="Система Контроля" />
         <link rel="touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%233B82F6' d='M20 80h60V40L50 20 20 40v40z'/%3E%3Cpath fill='%23ffffff' d='M30 70h10V50h20v20h10V45L50 30 30 45v25z'/%3E%3C/svg%3E" /> */}
       </head>
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
+      <body className={`${inter.className} bg-gray-50 min-h-screen `}>
         <AuthProvider>
             {children}
         </AuthProvider>
