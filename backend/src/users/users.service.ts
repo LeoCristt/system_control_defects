@@ -19,6 +19,18 @@ export class UsersService {
     return user || undefined;
   }
 
+  async findAll(): Promise<User[]> {
+    return this.usersRepository.find({ relations: ['role'] });
+  }
+
+  async findEngineers(): Promise<User[]> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .where('role.name = :roleName', { roleName: 'engineer' })
+      .getMany();
+  }
+
   async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
     let roleId = 2; // default engineer

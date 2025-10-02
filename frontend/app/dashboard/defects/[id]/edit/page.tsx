@@ -11,7 +11,10 @@ export default function DefectDetailsPage() {
   const [defect, setDefect] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [newStatus, setNewStatus] = useState('');
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [assigneeId, setAssigneeId] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
     const fetchDefect = async () => {
@@ -26,7 +29,8 @@ export default function DefectDetailsPage() {
         }
         const data = await response.json();
         setDefect(data);
-        setNewStatus(data.status.name);
+        setAssigneeId(data.assignee ? data.assignee.id : '');
+        setDueDate(data.due_date || '');
         // Assuming comments are part of defect or fetched separately
         setComments(data.comments || []);
       } catch (error) {
@@ -34,26 +38,44 @@ export default function DefectDetailsPage() {
       }
     };
 
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/engineers`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     fetchDefect();
+    fetchUsers();
   }, [defectId]);
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNewStatus(e.target.value);
-  };
-
-  const updateStatus = async () => {
+  const updateDefect = async () => {
     if (!defect) return;
     try {
+      const body: any = {};
+      if (assigneeId) body.assignee_id = assigneeId;
+      if (dueDate) body.due_date = dueDate;
+      body.status_id = 2; // В работе
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
-        body: JSON.stringify({ status_id: newStatus }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
-        throw new Error('Failed to update status');
+        throw new Error('Failed to update defect');
       }
       const updatedDefect = await response.json();
       setDefect(updatedDefect);
@@ -168,27 +190,47 @@ export default function DefectDetailsPage() {
                 </span>
               </div>
 
-              <div>
-                <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус</label>
-                <div className="flex space-x-2">
+              {defect.status.name === 'Новый' && (
+                <div>
+                  <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Назначить исполнителя</label>
                   <select
-                    id="newStatus"
-                    value={newStatus}
-                    onChange={handleStatusChange}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                    id="assignee"
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
                   >
-                    <option value="1">Новый</option>
-                    <option value="2">В работе</option>
-                    <option value="3">Закрыт</option>
+                    <option value="">Не назначен</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>{user.full_name || user.username}</option>
+                    ))}
                   </select>
+                </div>
+              )}
+
+              {defect.status.name === 'Новый' && (
+                <div>
+                  <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Сроки выполнения</label>
+                  <input
+                    type="date"
+                    id="dueDate"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              {defect.status.name === 'Новый' && (
+                <div>
+                  <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "В работе"</label>
                   <button
-                    onClick={updateStatus}
-                    className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+                    onClick={updateDefect}
+                    className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    Обновить
+                    Назначить и изменить статус
                   </button>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Описание</label>

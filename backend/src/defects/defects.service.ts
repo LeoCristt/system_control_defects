@@ -55,6 +55,24 @@ export class DefectsService {
     status_id: number;
     due_date: string;
   }>): Promise<Defect> {
+    // If status_id is provided, validate the transition
+    if (data.status_id) {
+      const currentDefect = await this.defectsRepository.findOne({
+        where: { id },
+        relations: ['status'],
+      });
+      if (!currentDefect) {
+        throw new Error('Defect not found');
+      }
+      const newStatus = await this.statusesService.findAll().then(statuses => statuses.find(s => s.id === data.status_id));
+      if (!newStatus) {
+        throw new Error('Invalid status ID');
+      }
+      if (currentDefect.status.name !== 'Новый' || newStatus.name !== 'В работе') {
+        throw new Error('Status can only be changed from "Новый" to "В работе"');
+      }
+    }
+
     await this.defectsRepository.update(id, {
       ...(data.title && { title: data.title }),
       ...(data.description && { description: data.description }),

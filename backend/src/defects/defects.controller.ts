@@ -122,7 +122,8 @@ export class DefectsController {
 
     return this.defectsService.update(defectId, {
       status_id: body.status_id ? parseInt(body.status_id) : undefined,
-      // Add other fields if needed
+      assignee_id: body.assignee_id ? parseInt(body.assignee_id) : undefined,
+      due_date: body.due_date || undefined,
     });
   }
 
