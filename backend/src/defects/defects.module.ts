@@ -8,6 +8,7 @@ import { ProjectUser } from '../projects/project-user.entity';
 import { DefectsService } from './defects.service';
 import { DefectsController } from './defects.controller';
 import { AttachmentsService } from '../attachments/attachments.service';
+import { StatusesModule } from '../statuses/statuses.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AttachmentsService } from '../attachments/attachments.service';
     MulterModule.register({
       dest: './uploads',
     }),
+    StatusesModule,
   ],
   providers: [DefectsService, AttachmentsService],
   controllers: [DefectsController],

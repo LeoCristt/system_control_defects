@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateDefectDto {
   @IsString()
@@ -14,17 +14,6 @@ export class CreateDefectDto {
   @IsNumber()
   stage_id?: number;
 
-  @IsOptional()
-  @IsNumber()
-  assignee_id?: number;
-
   @IsNumber()
   priority_id: number;
-
-  @IsNumber()
-  status_id: number;
-
-  @IsOptional()
-  @IsDateString()
-  due_date?: string;
 }

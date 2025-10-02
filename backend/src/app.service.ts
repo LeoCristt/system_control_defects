@@ -68,7 +68,7 @@ export class AppService implements OnModuleInit {
     }
 
     // Создание статусов
-    const statusNames = ['Новый', 'В работе', 'Закрыт'];
+    const statusNames = ['Новый', 'В работе','На проверке', 'Закрыт'];
     for (const name of statusNames) {
       const existing = (await this.statusesService.findAll()).find(s => s.name === name);
       if (!existing) {

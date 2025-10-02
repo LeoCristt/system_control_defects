@@ -18,6 +18,7 @@ interface Defect {
   creator: {
     id: number;
     username: string;
+    full_name: string;
   };
   assignee: {
     id: number;
@@ -238,8 +239,8 @@ export default function DefectsPage() {
           <div className="grid grid-cols-1 gap-4">
             {filteredDefects.length > 0 ? (
               filteredDefects.map((defect) => (
-                <div key={defect.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 cursor-pointer"
-                onClick={() => router.push(`./defects/${defect.id}/edit`)}>
+                <div key={defect.id} className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 ${userRole === 'manager' ? 'cursor-pointer' : ''}`}
+                onClick={userRole === 'manager' ? () => router.push(`./defects/${defect.id}/edit`) : undefined}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center space-x-3 flex-wrap gap-2">
@@ -252,6 +253,7 @@ export default function DefectsPage() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                         <span>Проект: {defect.project.name}</span>
                         <span>Стадия: {defect.stage?.name || 'Не указана'}</span>
+                        <span>Автор: {defect.creator.full_name}</span>
                         <span>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</span>
                         {defect.assignee && <span>Исполнитель: {defect.assignee.username}</span>}
                       </div>

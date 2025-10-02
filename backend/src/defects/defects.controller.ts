@@ -179,10 +179,7 @@ export class DefectsController {
       project_id: projectId,
       stage_id: body.stage_id ? parseInt(body.stage_id) : undefined,
       creator_id: user.sub,
-      assignee_id: body.assignee_id ? parseInt(body.assignee_id) : undefined,
       priority_id: parseInt(body.priority_id),
-      status_id: parseInt(body.status_id),
-      due_date: body.due_date,
     });
 
     // If a file was uploaded, create the attachment

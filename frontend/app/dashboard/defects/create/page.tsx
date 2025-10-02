@@ -18,10 +18,7 @@ interface Priority {
   name: string;
 }
 
-interface Status {
-  id: number;
-  name: string;
-}
+
 
 export default function CreateDefectPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -32,10 +29,7 @@ export default function CreateDefectPage() {
     description: '',
     project_id: '',
     stage_id: '',
-    assignee_id: '',
     priority_id: '',
-    status_id: '',
-    due_date: '',
   });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,26 +38,22 @@ export default function CreateDefectPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
-  const [statuses, setStatuses] = useState<Status[]>([]);
+
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [projectsRes, prioritiesRes, statusesRes] = await Promise.all([
+        const [projectsRes, prioritiesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/projects`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
           }),
           fetch(`${API_BASE_URL}/priorities`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
           }),
-          fetch(`${API_BASE_URL}/statuses`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
-          }),
         ]);
 
         if (projectsRes.ok) setProjects(await projectsRes.json());
         if (prioritiesRes.ok) setPriorities(await prioritiesRes.json());
-        if (statusesRes.ok) setStatuses(await statusesRes.json());
       } catch (err) {
         console.error('Failed to fetch options:', err);
       }
@@ -117,10 +107,7 @@ export default function CreateDefectPage() {
       data.append('description', formData.description);
       data.append('project_id', formData.project_id);
       if (formData.stage_id) data.append('stage_id', formData.stage_id);
-      if (formData.assignee_id) data.append('assignee_id', formData.assignee_id);
       data.append('priority_id', formData.priority_id);
-      data.append('status_id', formData.status_id);
-      if (formData.due_date) data.append('due_date', formData.due_date);
       if (file) data.append('file', file);
 
       const response = await fetch(`${API_BASE_URL}/defects/create`, {
@@ -209,20 +196,7 @@ export default function CreateDefectPage() {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="assignee_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Исполнитель
-                </label>
-                <input
-                  type="text"
-                  id="assignee_id"
-                  name="assignee_id"
-                  value={formData.assignee_id}
-                  onChange={handleInputChange}
-                  placeholder="ID пользователя (опционально)"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-                />
-              </div>
+
 
               <div>
                 <label htmlFor="priority_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -243,38 +217,9 @@ export default function CreateDefectPage() {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="status_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Статус *
-                </label>
-                <select
-                  id="status_id"
-                  name="status_id"
-                  value={formData.status_id}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-                >
-                  <option value="">Выберите статус</option>
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.id}>{status.name}</option>
-                  ))}
-                </select>
-              </div>
 
-              <div>
-                <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Срок выполнения
-                </label>
-                <input
-                  type="date"
-                  id="due_date"
-                  name="due_date"
-                  value={formData.due_date}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-                />
-              </div>
+
+
 
               <div>
                 <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
