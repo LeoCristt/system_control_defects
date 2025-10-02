@@ -57,6 +57,12 @@ export class AppService implements OnModuleInit {
     if (!existingEngineer) {
       await this.usersService.create(engineerEmail, 'engineer', 'engineer', 'engineer', 'Engineer User');
     }
+    
+    const engineerEmail2 = 'engineer2@engineer2.com';
+    const existingEngineer2 = await this.usersService.findOne(engineerEmail2);
+    if (!existingEngineer2) {
+      await this.usersService.create(engineerEmail2, 'engineer2', 'engineer2', 'engineer2', 'Engineer2 User');
+    }
 
     // Создание приоритетов
     const priorityNames = ['Низкий', 'Средний', 'Высокий'];
