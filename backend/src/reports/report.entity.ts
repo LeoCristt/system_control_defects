@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Project } from '../projects/project.entity';
+import { Defect } from '../defects/defect.entity';
 import { User } from '../users/user.entity';
 
 @Entity('reports')
@@ -10,6 +11,10 @@ export class Report {
   @ManyToOne(() => Project, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'project_id' })
   project: Project | null;
+
+  @ManyToOne(() => Defect, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'defect_id' })
+  defect: Defect | null;
 
   @Column({ type: 'varchar', length: 200 })
   title: string;

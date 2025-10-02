@@ -54,7 +54,7 @@ export class DefectsService {
     priority_id: number;
     status_id: number;
     due_date: string;
-  }>, userId?: number): Promise<Defect> {
+  }>, userId?: number, userRole?: string): Promise<Defect> {
     // If status_id is provided, validate the transition
     if (data.status_id) {
       const currentDefect = await this.defectsRepository.findOne({
@@ -68,14 +68,22 @@ export class DefectsService {
       if (!newStatus) {
         throw new Error('Invalid status ID');
       }
-      // Allow status change from "Новый" to "В работе" (by anyone with access)
+      // Allow status change from "Новый" to "В работе" (by managers)
       if (currentDefect.status.name === 'Новый' && newStatus.name === 'В работе') {
-        // Allowed
+        if (userRole !== 'manager') {
+          throw new Error('Only managers can change status from "Новый" to "В работе"');
+        }
       }
       // Allow status change from "В работе" to "На проверке" only by assignee
       else if (currentDefect.status.name === 'В работе' && newStatus.name === 'На проверке') {
         if (!userId || !currentDefect.assignee || currentDefect.assignee.id !== userId) {
           throw new Error('Only the assigned engineer can change status to "На проверке"');
+        }
+      }
+      // Allow status change from "На проверке" to "Закрыт" only by managers
+      else if (currentDefect.status.name === 'На проверке' && newStatus.name === 'Закрыт') {
+        if (userRole !== 'manager') {
+          throw new Error('Only managers can change status to "Закрыт"');
         }
       }
       else {

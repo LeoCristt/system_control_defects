@@ -128,6 +128,32 @@ export default function DefectDetailsPage() {
     await updateDefect(3); // На проверке
   };
 
+  const generateReport = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}/report`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `defect-${defectId}-report.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('Ошибка при создании отчёта');
+    }
+  };
+
   const addComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
@@ -319,6 +345,56 @@ export default function DefectDetailsPage() {
                           className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
                         >
                           Изменить статус
+                        </button>
+                      </div>
+                    );
+                  }
+                } catch (error) {
+                  console.error(error);
+                }
+                return null;
+              })()}
+
+              {defect.status.name === 'На проверке' && (() => {
+                // Decode token to check if user is manager
+                const token = localStorage.getItem('access_token');
+                if (!token) return null;
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  if (payload.role === 'manager') {
+                    return (
+                      <div>
+                        <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "Закрыт"</label>
+                        <button
+                          onClick={() => updateDefect(4)} // Закрыт
+                          className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Закрыть дефект
+                        </button>
+                      </div>
+                    );
+                  }
+                } catch (error) {
+                  console.error(error);
+                }
+                return null;
+              })()}
+
+              {defect.status.name === 'Закрыт' && (() => {
+                // Decode token to check if user is manager
+                const token = localStorage.getItem('access_token');
+                if (!token) return null;
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  if (payload.role === 'manager') {
+                    return (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Создать отчёт</label>
+                        <button
+                          onClick={generateReport}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Скачать отчёт Excel
                         </button>
                       </div>
                     );
