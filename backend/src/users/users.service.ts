@@ -40,7 +40,7 @@ export class UsersService {
 
   async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
-    let roleId = 2; // default engineer
+    let roleId = 2; 
     if (roleName) {
       const role = await this.rolesService.findOneByName(roleName);
       if (role) roleId = role.id;
@@ -64,26 +64,47 @@ export class UsersService {
       throw new Error('User not found');
     }
 
-    // Count available projects
+    // Количество проектов, к которым у пользователя есть доступ
     const availableProjectsCount = user.projectUsers.filter(pu => pu.has_access).length;
 
-    // Count closed defects where user is assignee
-    const closedDefectsCount = await this.usersRepository.manager
-      .createQueryBuilder()
-      .select('COUNT(*)', 'count')
-      .from('defects', 'd')
-      .leftJoin('statuses', 's', 'd.status_id = s.id')
-      .where('d.assignee_id = :userId AND s.name = :closedStatus', { userId, closedStatus: 'Закрыт' })
-      .getRawOne();
+    let closedDefectsCount, openDefectsCount;
 
-    // Count open defects where user is assignee
-    const openDefectsCount = await this.usersRepository.manager
-      .createQueryBuilder()
-      .select('COUNT(*)', 'count')
-      .from('defects', 'd')
-      .leftJoin('statuses', 's', 'd.status_id = s.id')
-      .where('d.assignee_id = :userId AND s.name != :closedStatus', { userId, closedStatus: 'Закрыт' })
-      .getRawOne();
+    if (user.role.name === 'manager') {
+      // Для менеджеров: дефекты, где они менеджеры
+      closedDefectsCount = await this.usersRepository.manager
+        .createQueryBuilder()
+        .select('COUNT(*)', 'count')
+        .from('defects', 'd')
+        .leftJoin('statuses', 's', 'd.status_id = s.id')
+        .where('d.manager_id = :userId AND s.name = :closedStatus', { userId, closedStatus: 'Закрыт' })
+        .getRawOne();
+
+      // Для менеджеров: открытые дефекты, где они менеджеры
+      openDefectsCount = await this.usersRepository.manager
+        .createQueryBuilder()
+        .select('COUNT(*)', 'count')
+        .from('defects', 'd')
+        .leftJoin('statuses', 's', 'd.status_id = s.id')
+        .where('d.manager_id = :userId AND s.name IN (:...openStatuses)', { userId, openStatuses: ['На проверке'] })
+        .getRawOne();
+    } else {
+      // Для инженеров: закрытые дефекты, где они исполнители
+      closedDefectsCount = await this.usersRepository.manager
+        .createQueryBuilder()
+        .select('COUNT(*)', 'count')
+        .from('defects', 'd')
+        .leftJoin('statuses', 's', 'd.status_id = s.id')
+        .where('d.assignee_id = :userId AND s.name = :closedStatus', { userId, closedStatus: 'Закрыт' })
+        .getRawOne();
+
+      openDefectsCount = await this.usersRepository.manager
+        .createQueryBuilder()
+        .select('COUNT(*)', 'count')
+        .from('defects', 'd')
+        .leftJoin('statuses', 's', 'd.status_id = s.id')
+        .where('d.assignee_id = :userId AND s.name != :closedStatus', { userId, closedStatus: 'Закрыт' })
+        .getRawOne();
+    }
 
     return {
       full_name: user.full_name,

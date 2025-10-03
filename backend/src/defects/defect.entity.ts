@@ -33,6 +33,10 @@ export class Defect {
   @JoinColumn({ name: 'assignee_id' })
   assignee: User | null;
 
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'manager_id' })
+  manager: User | null;
+
   @ManyToOne(() => Priority)
   @JoinColumn({ name: 'priority_id' })
   priority: Priority;

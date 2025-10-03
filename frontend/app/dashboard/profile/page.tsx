@@ -185,13 +185,17 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Устранено дефектов</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {displayUser.role === 'manager' ? 'Закрыто дефектов' : 'Устранено дефектов'}
+                  </span>
                   <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
                     {displayUser.defectsResolved}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Ожидают устранения</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {displayUser.role === 'manager' ? 'Ожидают проверки' : 'Ожидают устранения'}
+                  </span>
                   <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
                     {displayUser.pendingDefects}
                   </span>

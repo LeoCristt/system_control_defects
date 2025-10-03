@@ -41,6 +41,7 @@ export class DefectsService {
       stage: data.stage_id ? { id: data.stage_id } as any : null,
       creator: { id: data.creator_id } as any,
       assignee: null,
+      manager: null,
       priority: { id: data.priority_id } as any,
       status: { id: newStatus.id } as any,
       due_date: null,
@@ -61,7 +62,7 @@ export class DefectsService {
   }>, userId?: number, userRole?: string): Promise<Defect> {
     const oldDefect = await this.defectsRepository.findOne({
       where: { id },
-      relations: ['status', 'assignee'],
+      relations: ['status', 'assignee', 'manager'],
     });
     if (!oldDefect) {
       throw new Error('Дефект не найден');
@@ -95,6 +96,11 @@ export class DefectsService {
       }
     }
 
+    // Set manager_id if manager changes status for the first time
+    if (data.status_id && userRole === 'manager' && !oldDefect.manager) {
+      await this.defectsRepository.update(id, { manager: { id: userId } as any });
+    }
+
     await this.defectsRepository.update(id, {
       ...(data.title && { title: data.title }),
       ...(data.description && { description: data.description }),
@@ -108,7 +114,7 @@ export class DefectsService {
 
     const defect = await this.defectsRepository.findOne({
       where: { id },
-      relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status'],
+      relations: ['project', 'stage', 'creator', 'assignee', 'manager', 'priority', 'status'],
     });
 
     if (!defect) {
