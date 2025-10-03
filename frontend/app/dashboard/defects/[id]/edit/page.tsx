@@ -11,6 +11,7 @@ export default function DefectDetailsPage() {
 
   const [defect, setDefect] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
 
   const [users, setUsers] = useState<any[]>([]);
@@ -70,6 +71,35 @@ export default function DefectDetailsPage() {
   }, [defectId]);
 
   useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/history/${defectId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setHistory(data.map((h: any) => ({
+            id: h.id,
+            author: h.user.full_name || h.user.username,
+            action: h.action,
+            old_value: h.old_value,
+            new_value: h.new_value,
+            date: new Date(h.created_at).toISOString().split('T')[0],
+          })));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    if (defectId) {
+      fetchHistory();
+    }
+  }, [defectId]);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       if (!defect) return;
       // Decode token to check role
@@ -113,10 +143,29 @@ export default function DefectDetailsPage() {
         body: JSON.stringify(body),
       });
       if (!response.ok) {
-        throw new Error('Failed to update defect');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update defect');
       }
       const updatedDefect = await response.json();
       setDefect(updatedDefect);
+
+      // Refetch history after update
+      const historyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/history/${defectId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        setHistory(historyData.map((h: any) => ({
+          id: h.id,
+          author: h.user.full_name || h.user.username,
+          action: h.action,
+          old_value: h.old_value,
+          new_value: h.new_value,
+          date: new Date(h.created_at).toISOString().split('T')[0],
+        })));
+      }
     } catch (error) {
       console.error(error);
     }
@@ -462,6 +511,29 @@ export default function DefectDetailsPage() {
           </div>
 
           <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">История изменений</h3>
+            <div className="space-y-4 mb-6">
+              {history.length > 0 ? history.map((entry) => {
+                let message = '';
+                if (entry.action === 'status_changed') {
+                  message = `Статус изменен с "${entry.old_value}" на "${entry.new_value}"`;
+                } else if (entry.action === 'assignee_changed') {
+                  message = `Исполнитель изменен с "${entry.old_value}" на "${entry.new_value}"`;
+                } else if (entry.action === 'due_date_changed') {
+                  message = `Срок выполнения изменен с "${entry.old_value}" на "${entry.new_value}"`;
+                }
+                return (
+                  <div key={entry.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-gray-900 dark:text-white">{entry.author}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{entry.date}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
+                  </div>
+                );
+              }) : <p className="text-center text-gray-600 dark:text-gray-400">Нет истории изменений.</p>}
+            </div>
+
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Комментарии</h3>
             <div className="space-y-4 mb-6">
               {comments.length > 0 ? comments.map((comment) => (

@@ -32,7 +32,6 @@ export default function ProfilePage() {
 
   const [recentActivity] = useState([
     { id: 1, type: 'defect_resolved', message: 'Устранен дефект "Трещина в стене" на объекте ЖК "Северная звезда"', time: '2 часа назад', priority: 'high' },
-    { id: 2, type: 'inspection', message: 'Проведен плановый осмотр объекта "Торговый центр"', time: '5 часов назад', priority: 'medium' },
     { id: 3, type: 'report', message: 'Создан отчет по качеству за неделю', time: '1 день назад', priority: 'low' },
     { id: 4, type: 'defect_created', message: 'Обнаружен новый дефект на объекте "Технопарк"', time: '2 дня назад', priority: 'high' },
   ]);
@@ -63,16 +62,6 @@ export default function ProfilePage() {
       paused: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
     };
     return colors[status as keyof typeof colors];
-  };
-
-  const getStatusName = (status: string) => {
-    const names = {
-      active: 'Активный',
-      review: 'На проверке',
-      completed: 'Завершен',
-      paused: 'Приостановлен'
-    };
-    return names[status as keyof typeof names];
   };
 
   const getPriorityColor = (priority: string) => {
@@ -207,9 +196,6 @@ export default function ProfilePage() {
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center space-x-3 flex-wrap gap-2">
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{project.name}</h4>
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                                  {getStatusName(project.status)}
-                                </span>
                                 <div className={`w-2 h-2 rounded-full ${getPriorityColor(project.priority)}`}></div>
                               </div>
                               <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
