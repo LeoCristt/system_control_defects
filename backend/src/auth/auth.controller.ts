@@ -42,16 +42,13 @@ export class AuthController {
     return this.authService.refresh(refreshToken);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('leader')
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     if (!registerDto.email || !registerDto.username || !registerDto.password) {
       throw new BadRequestException('Требуются email, имя пользователя и пароль');
-    }
-
-    if (registerDto.role === 'руководитель') {
-      throw new BadRequestException('Невозможно выдать роль руководителя(обратитесь к разработчикам)');
     }
 
     try {

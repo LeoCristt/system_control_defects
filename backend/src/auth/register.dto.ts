@@ -4,4 +4,7 @@ export class RegisterDto {
   password: string;
   full_name?: string;
   role?: string;
+  phone_number?: string;
+  address?: string;
+  hire_date?: string;
 }

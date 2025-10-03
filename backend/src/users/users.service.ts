@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { RolesService } from '../roles/roles.service';
+import { ProjectUser } from '../projects/project-user.entity';
+import { Project } from '../projects/project.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -11,6 +13,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(ProjectUser)
+    private projectUsersRepository: Repository<ProjectUser>,
     private rolesService: RolesService,
   ) {}
 
@@ -40,7 +44,7 @@ export class UsersService {
 
   async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
-    let roleId = 2; 
+    let roleId = 2;
     if (roleName) {
       const role = await this.rolesService.findOneByName(roleName);
       if (role) roleId = role.id;
@@ -52,7 +56,20 @@ export class UsersService {
       role_id: roleId,
       full_name: full_name || username,
     });
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+
+    // Add user to all projects with has_access = false
+    const projects = await this.usersRepository.manager.find(Project);
+    const projectUsers = projects.map(project => ({
+      user_id: savedUser.id,
+      project_id: project.id,
+      has_access: false,
+    }));
+    if (projectUsers.length > 0) {
+      await this.projectUsersRepository.save(projectUsers);
+    }
+
+    return savedUser;
   }
 
   async getProfile(userId: number): Promise<any> {
