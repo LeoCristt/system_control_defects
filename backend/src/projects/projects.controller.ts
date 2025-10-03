@@ -1,5 +1,7 @@
-import { Controller, Get, UseGuards, Req, Param } from '@nestjs/common';
+import { Controller, Get, Put, UseGuards, Req, Param, Body } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { ProjectsService } from './projects.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -58,5 +60,35 @@ export class ProjectsController {
       }
       return this.projectsRepository.findOne({ where: { id: projectId } });
     }
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('leader')
+  @Get('users/:userId/access')
+  async getUserProjectAccess(@Param('userId') userId: string) {
+    const userIdNum = parseInt(userId, 10);
+    if (isNaN(userIdNum)) {
+      return { error: 'Invalid user ID' };
+    }
+    return this.projectsService.getUserProjectAccess(userIdNum);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('leader')
+  @Put('users/:userId/access/:projectId')
+  async updateUserProjectAccess(
+    @Param('userId') userId: string,
+    @Param('projectId') projectId: string,
+    @Body('has_access') hasAccess: boolean,
+  ) {
+    const userIdNum = parseInt(userId, 10);
+    const projectIdNum = parseInt(projectId, 10);
+
+    if (isNaN(userIdNum) || isNaN(projectIdNum)) {
+      return { error: 'Invalid user ID or project ID' };
+    }
+
+    await this.projectsService.updateUserProjectAccess(userIdNum, projectIdNum, hasAccess);
+    return { message: 'Access updated successfully' };
   }
 }

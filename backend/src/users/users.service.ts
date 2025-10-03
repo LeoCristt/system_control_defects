@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -153,5 +152,33 @@ export class UsersService {
       .groupBy('p.id');
 
     return query.getRawMany();
+  }
+
+  async getUserProjectAccess(userId: number): Promise<any[]> {
+    const query = this.usersRepository.manager
+      .createQueryBuilder()
+      .select('p.id', 'project_id')
+      .addSelect('p.name', 'project_name')
+      .addSelect('pu.has_access', 'has_access')
+      .from('projects', 'p')
+      .leftJoin('project_users', 'pu', 'pu.project_id = p.id AND pu.user_id = :userId')
+      .setParameters({ userId })
+      .orderBy('p.name');
+
+    return query.getRawMany();
+  }
+
+  async grantProjectAccess(userId: number, projectId: number): Promise<void> {
+    await this.projectUsersRepository.update(
+      { user_id: userId, project_id: projectId },
+      { has_access: true }
+    );
+  }
+
+  async revokeProjectAccess(userId: number, projectId: number): Promise<void> {
+    await this.projectUsersRepository.update(
+      { user_id: userId, project_id: projectId },
+      { has_access: false }
+    );
   }
 }

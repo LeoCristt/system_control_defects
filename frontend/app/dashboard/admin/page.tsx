@@ -20,6 +20,12 @@ interface User {
   hire_date?: string;
 }
 
+interface ProjectAccess {
+  project_id: number;
+  project_name: string;
+  has_access: boolean;
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -27,6 +33,9 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<any>({});
   const [showModal, setShowModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [projectAccess, setProjectAccess] = useState<ProjectAccess[]>([]);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -38,6 +47,70 @@ export default function AdminPage() {
     hire_date: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Function to open the access modal and fetch project access for the selected user
+  const openAccessModal = async (user: User) => {
+    setSelectedUser(user);
+    setShowAccessModal(true);
+
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${user.id}/project-access`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProjectAccess(data);
+      } else {
+        alert('Ошибка при загрузке доступа к проектам');
+      }
+    } catch (error) {
+      console.error('Failed to fetch project access', error);
+      alert('Ошибка при загрузке доступа к проектам');
+    }
+  };
+
+  // Function to toggle project access for a user
+  const toggleProjectAccess = async (projectId: number) => {
+    if (!selectedUser) return;
+
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const currentAccess = projectAccess.find(pa => pa.project_id === projectId);
+    if (!currentAccess) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${selectedUser.id}/project-access/${projectId}`, {
+        method: currentAccess.has_access ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        // Update local state
+        setProjectAccess(prev =>
+          prev.map(pa =>
+            pa.project_id === projectId ? { ...pa, has_access: !pa.has_access } : pa
+          )
+        );
+      } else {
+        alert('Ошибка при обновлении доступа к проекту');
+      }
+    } catch (error) {
+      console.error('Failed to update project access', error);
+      alert('Ошибка при обновлении доступа к проекту');
+    }
+  };
+
+  // Function to close the access modal
+  const closeAccessModal = () => {
+    setShowAccessModal(false);
+    setSelectedUser(null);
+    setProjectAccess([]);
+  };
 
   useEffect(() => {
     if (!user || user.role !== 'leader') {
@@ -244,6 +317,7 @@ export default function AdminPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Роль</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Телефон</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Дата приема</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Действия</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -265,6 +339,14 @@ export default function AdminPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500 dark:text-gray-400">{user.hire_date ? new Date(user.hire_date).toLocaleDateString('ru-RU') : '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => openAccessModal(user)}
+                        className="text-[#5E62DB] hover:text-[#4A4FB8] dark:text-[#7C7FF9] dark:hover:text-[#5E62DB] transition-colors"
+                      >
+                        Управление
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -399,6 +481,68 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Access Modal */}
+      {showAccessModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Управление доступом - {selectedUser.full_name || selectedUser.username}
+                </h3>
+                <button
+                  onClick={closeAccessModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Выберите проекты, к которым пользователь должен иметь доступ:
+                </p>
+
+                {projectAccess.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка проектов...</p>
+                ) : (
+                  <div className="space-y-3">
+                    {projectAccess.map((project) => (
+                      <div key={project.project_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {project.project_name}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={project.has_access}
+                            onChange={() => toggleProjectAccess(project.project_id)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5E62DB]/25 dark:peer-focus:ring-[#5E62DB]/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#5E62DB]"></div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-6">
+                <button
+                  onClick={closeAccessModal}
+                  className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg font-medium transition-colors"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
