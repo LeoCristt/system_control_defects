@@ -29,10 +29,9 @@ export class DefectsService {
     creator_id: number;
     priority_id: number;
   }): Promise<Defect> {
-    // Get status with name 'Новый'
     const newStatus = await this.statusesService.findAll().then(statuses => statuses.find(s => s.name === 'Новый'));
     if (!newStatus) {
-      throw new Error("Default status 'Новый' not found");
+      throw new Error("Базовый статус 'Новый' не определен");
     }
 
     const defect = this.defectsRepository.create({
@@ -60,41 +59,39 @@ export class DefectsService {
     status_id: number;
     due_date: string;
   }>, userId?: number, userRole?: string): Promise<Defect> {
-    // Fetch the current defect before update
     const oldDefect = await this.defectsRepository.findOne({
       where: { id },
       relations: ['status', 'assignee'],
     });
     if (!oldDefect) {
-      throw new Error('Defect not found');
+      throw new Error('Дефект не найден');
     }
 
-    // If status_id is provided, validate the transition
     if (data.status_id) {
       const newStatus = await this.statusesService.findAll().then(statuses => statuses.find(s => s.id === data.status_id));
       if (!newStatus) {
-        throw new Error('Invalid status ID');
+        throw new Error('Некорректный статус id');
       }
-      // Allow status change from "Новый" to "В работе" (by managers)
+      // Изменение доступа с "Новый" на "В работе" (для менеджеров)
       if (oldDefect.status.name === 'Новый' && newStatus.name === 'В работе') {
         if (userRole !== 'manager') {
-          throw new Error('Only managers can change status from "Новый" to "В работе"');
+          throw new Error('Только менеджеры могут поменять статус с "Новый" на "В работе"');
         }
       }
-      // Allow status change from "В работе" to "На проверке" only by assignee
+      // Изменение доступа с "В работе" на "На проверке" (для назначенного инженера)
       else if (oldDefect.status.name === 'В работе' && newStatus.name === 'На проверке') {
         if (!userId || !oldDefect.assignee || oldDefect.assignee.id !== userId) {
-          throw new Error('Only the assigned engineer can change status to "На проверке"');
+          throw new Error('Только назначенные иженеры могут поменять статус с "В работе" на "На проверке"');
         }
       }
-      // Allow status change from "На проверке" to "Закрыт" only by managers
+      // Изменение доступа с "На проверке" на "Закрыт" (для менеджеров)
       else if (oldDefect.status.name === 'На проверке' && newStatus.name === 'Закрыт') {
         if (userRole !== 'manager') {
-          throw new Error('Only managers can change status to "Закрыт"');
+          throw new Error('Только менеджеры могут поменять статус на "Закрыт"');
         }
       }
       else {
-        throw new Error('Invalid status transition');
+        throw new Error('Некорректное изменение статуса');
       }
     }
 
@@ -118,9 +115,8 @@ export class DefectsService {
       throw new Error('Defect not found');
     }
 
-    // Record history for changes
+    // Запись в историю изменений
     if (userId) {
-      // Status change
       if (data.status_id && oldDefect.status.id !== data.status_id) {
         const newStatus = await this.statusesService.findAll().then(statuses => statuses.find(s => s.id === data.status_id));
         await this.historyService.create({
@@ -132,7 +128,7 @@ export class DefectsService {
         });
       }
 
-      // Assignee change
+      // изменение исполнителя
       if (data.assignee_id !== undefined && (oldDefect.assignee?.id !== data.assignee_id)) {
         const oldAssigneeName = oldDefect.assignee ? `${oldDefect.assignee['full_name'] || oldDefect.assignee['username']}` : 'Не назначен';
         let newAssigneeName = 'Не назначен';
@@ -151,7 +147,7 @@ export class DefectsService {
         });
       }
 
-      // Due date change
+      // Изменение срока устранения
       if (data.due_date !== undefined && oldDefect.due_date !== data.due_date) {
         const oldDueDate = oldDefect.due_date ? new Date(oldDefect.due_date).toLocaleDateString('ru-RU') : 'Не устранено';
         const newDueDate = data.due_date ? new Date(data.due_date).toLocaleDateString('ru-RU') : 'Не устранено';

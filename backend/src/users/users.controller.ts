@@ -28,4 +28,18 @@ export class UsersController {
     const projectId = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
     return this.usersService.findEngineers(projectId);
   }
+
+  @UseGuards(AuthGuard)
+  @Get('profile')
+  async getProfile(@Req() req: Request) {
+    const user = req.user!;
+    return this.usersService.getProfile(user.sub);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('profile/projects')
+  async getProfileProjects(@Req() req: Request) {
+    const user = req.user!;
+    return this.usersService.getProfileProjects(user.sub);
+  }
 }

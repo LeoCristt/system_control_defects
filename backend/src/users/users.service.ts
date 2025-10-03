@@ -54,4 +54,63 @@ export class UsersService {
     });
     return this.usersRepository.save(user);
   }
+
+  async getProfile(userId: number): Promise<any> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['role', 'projectUsers'],
+    });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Count available projects
+    const availableProjectsCount = user.projectUsers.filter(pu => pu.has_access).length;
+
+    // Count closed defects where user is assignee
+    const closedDefectsCount = await this.usersRepository.manager
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('defects', 'd')
+      .leftJoin('statuses', 's', 'd.status_id = s.id')
+      .where('d.assignee_id = :userId AND s.name = :closedStatus', { userId, closedStatus: 'Закрыт' })
+      .getRawOne();
+
+    // Count open defects where user is assignee
+    const openDefectsCount = await this.usersRepository.manager
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('defects', 'd')
+      .leftJoin('statuses', 's', 'd.status_id = s.id')
+      .where('d.assignee_id = :userId AND s.name != :closedStatus', { userId, closedStatus: 'Закрыт' })
+      .getRawOne();
+
+    return {
+      full_name: user.full_name,
+      phone_number: user.phone_number,
+      address: user.address,
+      hire_date: user.hire_date,
+      available_projects_count: availableProjectsCount,
+      closed_defects_count: parseInt(closedDefectsCount.count),
+      open_defects_count: parseInt(openDefectsCount.count),
+    };
+  }
+
+  async getProfileProjects(userId: number): Promise<any[]> {
+    const query = this.usersRepository.manager
+      .createQueryBuilder()
+      .select('p.id', 'id')
+      .addSelect('p.name', 'name')
+      .addSelect('p.completion', 'completion')
+      .addSelect('p.status', 'status')
+      .addSelect('COUNT(CASE WHEN s.name != :closedStatus THEN 1 END)', 'defects_count')
+      .from('projects', 'p')
+      .leftJoin('project_users', 'pu', 'pu.project_id = p.id')
+      .leftJoin('defects', 'd', 'd.project_id = p.id')
+      .leftJoin('statuses', 's', 'd.status_id = s.id')
+      .where('pu.user_id = :userId AND pu.has_access = true', { userId, closedStatus: 'Закрыт' })
+      .groupBy('p.id');
+
+    return query.getRawMany();
+  }
 }

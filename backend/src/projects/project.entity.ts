@@ -28,4 +28,10 @@ export class Project {
 
   @Column({ type: 'date', nullable: true })
   end_date: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  completion: number | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  status: string | null;
 }

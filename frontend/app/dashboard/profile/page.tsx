@@ -1,40 +1,84 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('projects');
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
-  const [user] = useState({
-    id: '001',
-    name: 'Leo Crist',
-    role: 'leader',
-    email: 'Leo@yandex.ru',
-    phone: '+7 (800) 555 35 35',
-    avatar: 'https://avatars.mds.yandex.net/get-shedevrum/14123243/cropped_original_8d39c8da6e6311efba3cba626bd321fb/orig',
-    joinDate: '2022-03-15',
-    location: 'Москва, Россия',
-    projects: 12,
-    defectsResolved: 89,
-    pendingDefects: 5
-  });
+  const [profileData, setProfileData] = useState<any>(null);
 
-  const [projects] = useState([
-    { id: 1, name: 'ЖК "Северная звезда"', status: 'active', defects: 3, completion: 78, priority: 'high' },
-    { id: 2, name: 'Торговый центр "Галерея"', status: 'review', defects: 1, completion: 95, priority: 'medium' },
-    { id: 3, name: 'Офисный комплекс "Технопарк"', status: 'active', defects: 7, completion: 45, priority: 'high' },
-    { id: 4, name: 'Жилой комплекс "Восток"', status: 'completed', defects: 0, completion: 100, priority: 'low' },
-  ]);
+  const [projects, setProjects] = useState<any[]>([]);
 
   const [recentActivity] = useState([
     { id: 1, type: 'defect_resolved', message: 'Устранен дефект "Трещина в стене" на объекте ЖК "Северная звезда"', time: '2 часа назад', priority: 'high' },
     { id: 3, type: 'report', message: 'Создан отчет по качеству за неделю', time: '1 день назад', priority: 'low' },
     { id: 4, type: 'defect_created', message: 'Обнаружен новый дефект на объекте "Технопарк"', time: '2 дня назад', priority: 'high' },
   ]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setProfileData(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile', error);
+      }
+    };
+
+    const fetchProjects = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/profile/projects`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch projects', error);
+      }
+    };
+
+    fetchProfile();
+    fetchProjects();
+  }, []);
+
+  if (!user || !profileData) {
+    return <div>Loading...</div>;
+  }
+
+  const displayUser = {
+    id: user.id.toString(),
+    name: profileData.full_name,
+    role: user.role,
+    email: user.email,
+    phone: profileData.phone_number || 'Не указан',
+    avatar: 'https://avatars.mds.yandex.net/get-shedevrum/14123243/cropped_original_8d39c8da6e6311efba3cba626bd321fb/orig',
+    joinDate: profileData.hire_date || 'Не указана',
+    location: profileData.address || 'Не указан',
+    projects: profileData.available_projects_count,
+    defectsResolved: profileData.closed_defects_count,
+    pendingDefects: profileData.open_defects_count
+  };
 
   const getRoleName = (role: string) => {
     const roles = {
@@ -82,8 +126,8 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
                   <img
-                    src={user.avatar}
-                    alt={user.name}
+                    src={displayUser.avatar}
+                    alt={displayUser.name}
                     className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 dark:border-gray-700"
                   />
                   <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-full flex items-center justify-center transition-colors">
@@ -95,9 +139,9 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="text-center space-y-2">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
-                    {getRoleName(user.role)}
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{displayUser.name}</h2>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(displayUser.role)}`}>
+                    {getRoleName(displayUser.role)}
                   </span>
                 </div>
               </div>
@@ -107,26 +151,26 @@ export default function ProfilePage() {
                   <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-gray-900 dark:text-gray-100">{user.email}</span>
+                  <span className="text-gray-900 dark:text-gray-100">{displayUser.email}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm">
                   <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
-                  <span className="text-gray-900 dark:text-gray-100">{user.phone}</span>
+                  <span className="text-gray-900 dark:text-gray-100">{displayUser.phone}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm">
                   <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-gray-900 dark:text-gray-100">{user.location}</span>
+                  <span className="text-gray-900 dark:text-gray-100">{displayUser.location}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-sm">
                   <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-2 13a2 2 0 002 2h6a2 2 0 002-2L16 7m-6 0V3a2 2 0 012-2h4a2 2 0 012 2v4" />
                   </svg>
-                  <span className="text-gray-900 dark:text-gray-100">В компании с {user.joinDate}</span>
+                  <span className="text-gray-900 dark:text-gray-100">В компании с {displayUser.joinDate}</span>
                 </div>
               </div>
             </div>
@@ -137,19 +181,19 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Активные проекты</span>
                   <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-[#5E62DB]/10 text-[#5E62DB] border border-[#5E62DB]/20">
-                    {user.projects}
+                    {displayUser.projects}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Устранено дефектов</span>
                   <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
-                    {user.defectsResolved}
+                    {displayUser.defectsResolved}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Ожидают устранения</span>
                   <span className="inline-flex px-2 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-                    {user.pendingDefects}
+                    {displayUser.pendingDefects}
                   </span>
                 </div>
               </div>
@@ -196,23 +240,22 @@ export default function ProfilePage() {
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center space-x-3 flex-wrap gap-2">
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{project.name}</h4>
-                                <div className={`w-2 h-2 rounded-full ${getPriorityColor(project.priority)}`}></div>
                               </div>
                               <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                                 <span className="flex items-center">
                                   <svg className="w-4 h-4 mr-1 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                   </svg>
-                                  {project.defects} дефектов
+                                  {project.defects_count} дефектов
                                 </span>
-                                <span>{project.completion}% завершено</span>
+                                <span>{project.completion || 0}% завершено</span>
                               </div>
                             </div>
                             <div className="w-full sm:w-32">
                               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                 <div
                                   className="bg-[#5E62DB] h-2 rounded-full transition-all duration-300"
-                                  style={{ width: `${project.completion}%` }}
+                                  style={{ width: `${project.completion || 0}%` }}
                                 ></div>
                               </div>
                             </div>

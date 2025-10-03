@@ -19,6 +19,15 @@ export class User {
   @Column({ type: 'varchar', length: 100 })
   full_name: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone_number: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  address: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  hire_date: string | null;
+
   @Column()
   role_id: number;
 

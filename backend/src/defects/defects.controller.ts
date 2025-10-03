@@ -327,7 +327,6 @@ export class DefectsController {
       },
     }),
     fileFilter: (req, file, callback) => {
-      // Allow images and documents
       if (!file.originalname.match(/\.(jpg|jpeg|png|gif|pdf|doc|docx)$/)) {
         return callback(new Error('Only image and document files are allowed!'), false);
       }
@@ -344,14 +343,14 @@ export class DefectsController {
   ) {
     const user = req.user!;
 
-    // Check if user is engineer
+    // Проверка роли пользователя
     if (user.role !== 'engineer') {
       throw new NotFoundException('Access denied');
     }
 
     const projectId = parseInt(body.project_id);
 
-    // Check if user has access to the project
+    // Проверка доступа к проекту
     const projectUser = await this.projectUsersRepository.findOne({
       where: { user_id: user.sub, project_id: projectId, has_access: true },
     });
@@ -360,7 +359,7 @@ export class DefectsController {
       throw new NotFoundException('Access denied');
     }
 
-    // Create the defect
+    // Создание дефекта
     const defect = await this.defectsService.create({
       title: body.title,
       description: body.description,
@@ -370,7 +369,7 @@ export class DefectsController {
       priority_id: parseInt(body.priority_id),
     });
 
-    // If a file was uploaded, create the attachment
+    // Если есть файл, сохраняем вложение
     if (file) {
       const filePath = `/uploads/${file.filename}`;
       await this.attachmentsService.create({
@@ -382,7 +381,7 @@ export class DefectsController {
       });
     }
 
-    // Return the defect with attachments
+    // Возвращаем созданный дефект с полными данными
     return this.defectsRepository.findOne({
       where: { id: defect.id },
       relations: ['project', 'stage', 'creator', 'assignee', 'priority', 'status', 'attachments', 'attachments.uploaded_by'],
