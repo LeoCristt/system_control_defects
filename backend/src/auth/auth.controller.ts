@@ -52,7 +52,7 @@ export class AuthController {
     }
 
     try {
-      const user = await this.usersService.create(registerDto.email, registerDto.username, registerDto.password, registerDto.role, registerDto.full_name);
+      const user = await this.usersService.create(registerDto.email, registerDto.username, registerDto.password, registerDto.role, registerDto.full_name, registerDto.phone_number, registerDto.address, registerDto.hire_date);
       return {
         message: 'Пользователь успешно зарегистрирован',
         user: { id: user.id, email: user.email, username: user.username, role: user.role?.name }

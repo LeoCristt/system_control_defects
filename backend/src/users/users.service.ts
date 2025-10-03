@@ -42,7 +42,7 @@ export class UsersService {
     return query.getMany();
   }
 
-  async create(email: string, username: string, password: string, roleName?: string, full_name?: string): Promise<User> {
+  async create(email: string, username: string, password: string, roleName?: string, full_name?: string, phone_number?: string, address?: string, hire_date?: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
     let roleId = 2;
     if (roleName) {
@@ -55,6 +55,9 @@ export class UsersService {
       password: hashedPassword,
       role_id: roleId,
       full_name: full_name || username,
+      phone_number,
+      address,
+      hire_date,
     });
     const savedUser = await this.usersRepository.save(user);
 
