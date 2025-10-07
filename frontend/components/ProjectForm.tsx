@@ -24,7 +24,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Название</label>
         <input
-          className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded border px-3 py-2 text-black dark:text-white bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5E62DB]"
           value={name}
           onChange={e => setName(e.target.value)}
           required
@@ -33,7 +33,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Описание</label>
         <textarea
-          className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded border px-3 py-2 text-black dark:text-white bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5E62DB]"
           value={description}
           onChange={e => setDescription(e.target.value)}
         />
@@ -43,7 +43,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Дата начала</label>
           <input
             type="date"
-            className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded border px-3 py-2 text-black dark:text-white bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5E62DB]"
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
           />
@@ -52,7 +52,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Дата окончания</label>
           <input
             type="date"
-            className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded border px-3 py-2 text-black dark:text-white bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5E62DB]"
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
           />
@@ -61,7 +61,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Статус</label>
         <input
-          className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded border px-3 py-2 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#5E62DB]"
           value={status}
           onChange={e => setStatus(e.target.value)}
         />
@@ -76,7 +76,7 @@ export default function ProjectForm({ onSubmit, initialData, onCancel }: Project
         </button>
         <button
           type="submit"
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 shadow"
+          className="px-4 py-2 rounded bg-[#5E62DB] text-white hover:bg-[#5E62DB] shadow"
         >
           Сохранить
         </button>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ProjectForm from "@/components/ProjectForm";
 import { useAuth } from "@/contexts/AuthContext";
+import LoadingPage from '@/components/LoadingPage';
 
 interface Project {
   id: number;
@@ -55,9 +56,7 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Загрузка проектов...</div>
-      </div>
+      <LoadingPage/>
     );
   }
 
@@ -70,7 +69,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="pt-14 pb-16 bg-white dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 min-h-screen transition-colors duration-300">
+    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Проекты</h2>
@@ -94,7 +93,7 @@ export default function ProjectsPage() {
                 {user?.role === 'leader' && (
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition">
                     <button
-                      className="px-2 py-1 rounded bg-blue-500 text-white text-xs font-semibold hover:bg-blue-700 shadow"
+                      className="px-2 py-1 rounded bg-[#5E62DB] text-white text-xs font-semibold hover:bg-[#5E62DB] shadow"
                       onClick={e => { e.stopPropagation(); setEditProject(project); setShowModal(true); }}
                     >
                       Редактировать
@@ -169,7 +168,7 @@ export default function ProjectsPage() {
                 }
               }}
             />
-            {modalLoading && <div className="text-blue-600 mt-2">Сохранение...</div>}
+            {modalLoading && <div className="text-[#5E62DB] mt-2">Сохранение...</div>}
           </div>
         </div>
       )}

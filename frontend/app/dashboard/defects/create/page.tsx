@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingPage from '../../../../components/LoadingPage'
 
 interface Project {
   id: number;
@@ -122,7 +123,7 @@ export default function CreateDefectPage() {
         throw new Error('Failed to create defect');
       }
 
-      router.push('/defects');
+      router.push('./');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -253,7 +254,7 @@ export default function CreateDefectPage() {
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => router.push('/defects')}
+                onClick={() => router.push('./')}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
               >
                 Отмена

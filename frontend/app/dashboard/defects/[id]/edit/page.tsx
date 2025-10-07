@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import LoadingPage from '@/components/LoadingPage';
 
 export default function DefectDetailsPage() {
   const router = useRouter();
@@ -156,10 +157,20 @@ export default function DefectDetailsPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update defect');
       }
-      const updatedDefect = await response.json();
-      setDefect(updatedDefect);
+      // если сервер вернул частичный объект, лучше повторно запросить полную сущность
+      const fullResp = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/defects/${defectId}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` },
+      });
+      if (fullResp.ok) {
+        const fullData = await fullResp.json();
+        setDefect(fullData);
+      } else {
+        // fallback: взять то, что вернул PUT и сохранить attachments из предыдущего состояния
+        const updatedDefect = await response.json().catch(() => null);
+        setDefect(prev => ({ ...(prev || {}), ...(updatedDefect || {}), attachments: (updatedDefect && updatedDefect.attachments) ?? prev?.attachments ?? [] }));
+      }
 
-      // Refetch history after update
+      // Refetch history after update (оставьте как было)
       const historyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/history/${defectId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -180,6 +191,7 @@ export default function DefectDetailsPage() {
       console.error(error);
     }
   };
+
 
   const changeStatusToInWork = async () => {
     await updateDefect(2); // В работе
@@ -249,7 +261,7 @@ export default function DefectDetailsPage() {
           try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             author = payload.full_name || payload.username || 'Пользователь';
-          } catch {}
+          } catch { }
         }
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/comments`, {
           method: 'POST',
@@ -310,18 +322,16 @@ export default function DefectDetailsPage() {
 
   if (!defect) {
     return (
-      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Загрузка...</div>
-      </div>
+      <LoadingPage/>
     );
   }
 
   return (
-    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center gap-4 mb-8">
           <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-[#5E62DB]/10">
-            <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#5E62DB"/></svg>
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#5E62DB" /></svg>
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Дефект #{defect.id}: {defect.title}</h2>
         </div>
@@ -331,10 +341,9 @@ export default function DefectDetailsPage() {
           {/* Левая карточка: фото, инфо, история */}
           <div className="flex flex-col gap-8">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-7 flex flex-col items-center">
-              {/* ...existing code... */}
               {defect.attachments && defect.attachments.length > 0 ? (
                 <img
-                  src={`http://localhost:3001${defect.attachments[0].file_path}`}
+                  src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${defect.attachments[0].file_path}`}
                   alt="Фото дефекта"
                   className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700 mb-2"
                 />
@@ -345,7 +354,6 @@ export default function DefectDetailsPage() {
               )}
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Фото дефекта</p>
               <div className="w-full space-y-3">
-                {/* ...existing code... */}
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Название</label>
                   <div className="text-base font-semibold text-gray-900 dark:text-white">{defect.title}</div>
@@ -372,7 +380,6 @@ export default function DefectDetailsPage() {
                 <div className="relative pl-6">
                   <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-[#5e62db91] dark:bg-blue-800/40" />
                   {(() => {
-                    // ...existing code...
                     let lastKey = '';
                     return history.filter((entry, idx, arr) => {
                       const key = `${entry.action}|${entry.old_value}|${entry.new_value}|${entry.date}`;
@@ -410,14 +417,11 @@ export default function DefectDetailsPage() {
           {/* Правая карточка: действия и статус + комментарии */}
           <div className="flex flex-col gap-8">
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-7 space-y-6 flex flex-col h-fit">
-              {/* ...existing code... */}
               <div className="w-full flex flex-row items-center gap-2 mb-2">
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Текущий статус:</label>
                 <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(defect.status.name)}`}>{getStatusName(defect.status.name)}</span>
               </div>
-              {/* ...existing code for status actions, description, dates... */}
               {defect.status.name === 'Новый' && (() => {
-                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -425,7 +429,6 @@ export default function DefectDetailsPage() {
                   if (payload.role === 'manager') {
                     return (
                       <div className="flex flex-col gap-3 w-full max-w-xs mx-auto mt-2">
-                        {/* ...existing code... */}
                         <div>
                           <label htmlFor="assignee" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Назначить исполнителя</label>
                           <select
@@ -466,7 +469,6 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'В работе' && (() => {
-                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -492,7 +494,6 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'На проверке' && (() => {
-                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -502,7 +503,7 @@ export default function DefectDetailsPage() {
                       <div>
                         <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "Закрыт"</label>
                         <button
-                          onClick={() => updateDefect(4)} // Закрыт
+                          onClick={() => updateDefect(4)}
                           className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
                         >
                           Закрыть дефект
@@ -517,7 +518,6 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'Закрыт' && (() => {
-                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -602,10 +602,11 @@ export default function DefectDetailsPage() {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[#000000b8] flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Загрузить отчёт</h3>
             <div className="space-y-4">
@@ -647,50 +648,5 @@ export default function DefectDetailsPage() {
         </div>
       )}
     </div>
-
-    {/* Upload Modal */}
-    {showUploadModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Загрузить отчёт</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Выберите файл</label>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.pdf,.doc,.docx"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setSelectedFile(null);
-                }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={async () => {
-                  if (selectedFile) {
-                    await uploadReport(selectedFile);
-                    setShowUploadModal(false);
-                    setSelectedFile(null);
-                  }
-                }}
-                disabled={!selectedFile}
-                className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Отправить
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
   );
 }

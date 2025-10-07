@@ -16,7 +16,7 @@ import {
   Legend,
 } from "chart.js";
 
-// Регистрация необходимых компонентов Chart.js
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -28,6 +28,9 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+import LoadingPage from '@/components/LoadingPage';
+
 const Bar = dynamic(() => import("react-chartjs-2").then(mod => mod.Bar), { ssr: false });
 const Pie = dynamic(() => import("react-chartjs-2").then(mod => mod.Pie), { ssr: false });
 const Line = dynamic(() => import("react-chartjs-2").then(mod => mod.Line), { ssr: false });
@@ -125,9 +128,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <span className="text-gray-600 dark:text-gray-300">Загрузка...</span>
-      </div>
+      <LoadingPage/>
     );
   }
 
@@ -143,8 +144,6 @@ export default function ReportsPage() {
     <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-8">Отчёты и статистика</h2>
-
-
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex items-center">
@@ -287,9 +286,7 @@ export default function ReportsPage() {
                     </div>
                     {report.file_path && (
                       <a
-                        href={report.file_path}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL}${report.file_path}`}
                         className="px-4 py-2 rounded bg-[#5E62DB] text-white font-semibold shadow hover:bg-[#4346a3] transition"
                       >
                         Скачать файл

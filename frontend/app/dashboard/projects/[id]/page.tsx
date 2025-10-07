@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+    import LoadingPage from '@/components/LoadingPage';
 
 interface Project {
   id: number;
@@ -91,9 +92,7 @@ export default function ProjectDetailsPage() {
 
   if (loading) {
     return (
-      <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Загрузка проекта...</div>
-      </div>
+    <LoadingPage/>
     );
   }
 
@@ -139,7 +138,6 @@ export default function ProjectDetailsPage() {
                 <div
                   key={defect.id}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                  onClick={() => router.push(`/defects/${defect.id}`)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="text-lg font-medium text-gray-900 dark:text-white">{defect.title}</h4>

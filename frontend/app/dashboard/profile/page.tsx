@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import LoadingPage from '@/components/LoadingPage';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -63,7 +64,7 @@ export default function ProfilePage() {
   }, []);
 
   if (!user || !profileData) {
-    return <div>Loading...</div>;
+    return <LoadingPage/>
   }
 
   const displayUser = {
@@ -118,7 +119,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="pt-14 pb-16 h-full bg-gray-50 c transition-colors duration-300">
+    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
