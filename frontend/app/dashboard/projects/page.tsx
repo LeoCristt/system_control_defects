@@ -70,7 +70,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="pt-14 pb-16 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 min-h-screen transition-colors duration-300">
+    <div className="pt-14 pb-16 bg-white dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 min-h-screen transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Проекты</h2>
@@ -115,7 +115,6 @@ export default function ProjectsPage() {
                   {project.start_date && <p>Начало: {project.start_date}</p>}
                   {project.end_date && <p>Окончание: {project.end_date}</p>}
                   {project.status && <p>Статус: {project.status}</p>}
-                  {project.id && <p>ID: {project.id}</p>}
                 </div>
               </div>
             ))

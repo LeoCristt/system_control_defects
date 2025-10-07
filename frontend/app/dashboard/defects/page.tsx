@@ -23,6 +23,7 @@ interface Defect {
   assignee: {
     id: number;
     username: string;
+    full_name: string;
   } | null;
   priority: {
     id: number;
@@ -51,6 +52,22 @@ export default function DefectsPage() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+  // Цвета для статусов
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Новый':
+        return <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300 text-xs rounded">Новый</span>;
+      case 'В работе':
+        return <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 text-xs rounded">В работе</span>;
+      case 'На проверке':
+        return <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 text-xs rounded">На проверке</span>;
+      case 'Закрыт':
+      case 'Устранен':
+        return <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 text-xs rounded">Устранен</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-300 text-xs rounded">{status}</span>;
+    }
+  };
   const router = useRouter();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -119,7 +136,10 @@ export default function DefectsPage() {
 
   // Получаем уникальные проекты и статусы для фильтров
   const uniqueProjects = projects;
-  const statuses = [...new Set(defects.map(d => d.status.name))];
+  let statuses = [...new Set(defects.map(d => d.status.name))];
+  if (!statuses.includes('На проверке')) {
+    statuses.push('На проверке');
+  }
 
   // Получаем стадии для выбранного проекта
   const projectStages = selectedProject === ''
@@ -141,49 +161,44 @@ export default function DefectsPage() {
     );
   });
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      'Новый': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      'В работе': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      'Закрыт': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-    };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
+  // Цвета для приоритетов
+  const getPriorityBadge = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'высокий':
+        return <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300 text-xs rounded">Высокий</span>;
+      case 'средний':
+        return <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 text-xs rounded">Средний</span>;
+      case 'низкий':
+        return <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 text-xs rounded">Низкий</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-300 text-xs rounded">{priority}</span>;
+    }
   };
 
-  const getStatusName = (status: string) => {
-    const names = {
-      'Новый': 'Открыт',
-      'В работе': 'В работе',
-      'Закрыт': 'Устранен'
-    };
-    return names[status as keyof typeof names] || status;
+  // Статус "Устранен" для архива
+  const isArchived = (defect: Defect) => {
+    return defect.status.name === 'Закрыт' || defect.status.name === 'Устранен';
   };
 
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      high: 'text-red-500',
-      medium: 'text-yellow-500',
-      low: 'text-green-500'
-    };
-    return colors[priority as keyof typeof colors];
-  };
+  // Активные и архивные дефекты
+  const activeDefects = filteredDefects.filter(d => !isArchived(d));
+  const archivedDefects = filteredDefects.filter(isArchived);
 
   return (
-    <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="pt-14 pb-16 bg-white dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 min-h-screen transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Дефекты</h2>
-            {userRole === 'engineer' && (
-              <button
-                onClick={() => router.push('./defects/create')}
-                className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Создать дефект
-              </button>
-            )}
-          </div>
-          <div className={`grid grid-cols-1 ${selectedProject ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 mb-6`}>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Дефекты</h2>
+          {userRole === 'engineer' && (
+            <button
+              onClick={() => router.push('./defects/create')}
+              className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Создать дефект
+            </button>
+          )}
+        </div>
+        <div className={`grid grid-cols-1 ${selectedProject ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-4 mb-6`}>
             <div className="relative">
               <input
                 type="text"
@@ -231,62 +246,108 @@ export default function DefectsPage() {
             >
               <option value="">Все статусы</option>
               {statuses.map((stat) => (
-                <option key={stat} value={stat}>{getStatusName(stat)}</option>
+                <option key={stat} value={stat}>{stat}</option>
               ))}
             </select>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {filteredDefects.length > 0 ? (
-              filteredDefects.map((defect) => {
-                // Determine if user is author or assignee
-                const token = localStorage.getItem('access_token');
-                let userId = null;
-                let userRoleLocal = null;
-                if (token) {
-                  try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    userId = payload.sub;
-                    userRoleLocal = payload.role;
-                  } catch (error) {
-                    console.error(error);
+          {/* Активные дефекты */}
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Активные дефекты</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {activeDefects.length > 0 ? (
+                activeDefects.map((defect) => {
+                  const token = localStorage.getItem('access_token');
+                  let userId = null;
+                  let userRoleLocal = null;
+                  if (token) {
+                    try {
+                      const payload = JSON.parse(atob(token.split('.')[1]));
+                      userId = payload.sub;
+                      userRoleLocal = payload.role;
+                    } catch (error) {
+                      console.error(error);
+                    }
                   }
-                }
-                const canEdit = userRoleLocal === 'manager' || defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId);
-                return (
-                  <div
-                    key={defect.id}
-                    className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 ${canEdit ? 'cursor-pointer' : ''}`}
-                    onClick={canEdit ? () => router.push(`./defects/${defect.id}/edit`) : undefined}
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center space-x-3 flex-wrap gap-2">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">{defect.title}</h4>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(defect.status.name)}`}>
-                            {getStatusName(defect.status.name)}
-                          </span>
-                          <div className={`w-2 h-2 rounded-full ${getPriorityColor(defect.priority.name)}`}></div>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                          <span>Проект: {defect.project.name}</span>
-                          <span>Стадия: {defect.stage?.name || 'Не указана'}</span>
-                          <span>Автор: {defect.creator.full_name}</span>
-                          <span>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</span>
-                          {defect.assignee && <span>Исполнитель: {defect.assignee.username}</span>}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{defect.description}</p>
+                  const canEdit = userRoleLocal === 'manager' || defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId);
+                  return (
+                    <div
+                      key={defect.id}
+                      className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-7 cursor-pointer hover:scale-[1.03] hover:shadow-2xl transition-all border border-transparent hover:border-blue-400 dark:hover:border-blue-600 relative group"
+                      onClick={canEdit ? () => router.push(`./defects/${defect.id}/edit`) : undefined}
+                    >
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{defect.title}</h3>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {getPriorityBadge(defect.priority.name)}
+                        {getStatusBadge(defect.status.name)}
+                        {defect.assignee && <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded">Исполнитель: {defect.assignee.full_name}</span>}
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300 text-base mb-3">{defect.description}</p>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <p>Проект: {defect.project.name}</p>
+                        <p>Автор: {defect.creator.full_name}</p>
+                        <p>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</p>
+                        {defect.updated_at && <p>Обновлен: {new Date(defect.updated_at).toLocaleDateString('ru-RU')}</p>}
+                        {defect.due_date && <p>Срок: {new Date(defect.due_date).toLocaleDateString('ru-RU')}</p>}
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-center text-gray-600 dark:text-gray-400">Нет дефектов, соответствующих фильтрам.</p>
-            )}
+                  );
+                })
+              ) : (
+                <p className="text-center text-gray-600 dark:text-gray-400 col-span-full">Нет активных дефектов.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Архив */}
+          <div className="mt-12">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Архив (Устранённые)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {archivedDefects.length > 0 ? (
+                archivedDefects.map((defect) => {
+                  const token = localStorage.getItem('access_token');
+                  let userId = null;
+                  let userRoleLocal = null;
+                  if (token) {
+                    try {
+                      const payload = JSON.parse(atob(token.split('.')[1]));
+                      userId = payload.sub;
+                      userRoleLocal = payload.role;
+                    } catch (error) {
+                      console.error(error);
+                    }
+                  }
+                  const canEdit = userRoleLocal === 'manager' || defect.creator.id === userId || (defect.assignee && defect.assignee.id === userId);
+                  return (
+                    <div
+                      key={defect.id}
+                      className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-7 cursor-pointer hover:scale-[1.03] hover:shadow-2xl transition-all border border-transparent hover:border-blue-400 dark:hover:border-blue-600 relative group opacity-70"
+                      onClick={canEdit ? () => router.push(`./defects/${defect.id}/edit`) : undefined}
+                    >
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{defect.title}</h3>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {getPriorityBadge(defect.priority.name)}
+                        {getStatusBadge(defect.status.name)}
+                        {defect.assignee && <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded">Исполнитель: {defect.assignee.full_name}</span>}
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300 text-base mb-3">{defect.description}</p>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <p>Проект: {defect.project.name}</p>
+                        <p>Автор: {defect.creator.full_name}</p>
+                        <p>Создан: {new Date(defect.created_at).toLocaleDateString('ru-RU')}</p>
+                        {defect.updated_at && <p>Обновлен: {new Date(defect.updated_at).toLocaleDateString('ru-RU')}</p>}
+                        {defect.due_date && <p>Срок: {new Date(defect.due_date).toLocaleDateString('ru-RU')}</p>}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-center text-gray-600 dark:text-gray-400 col-span-full">Нет устранённых дефектов.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+  
   );
 }
