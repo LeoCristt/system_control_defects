@@ -1,4 +1,4 @@
-import { Controller, Get, Put, UseGuards, Req, Param, Body } from '@nestjs/common';
+import { Controller, Get, Put, Post, Patch, UseGuards, Req, Param, Body } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -37,6 +37,50 @@ export class ProjectsController {
         where: { id: In(projectIds) },
       });
     }
+  }
+
+  @UseGuards(AuthGuard)
+  @Post()
+  async createProject(@Body() body: { name: string; description?: string; start_date?: string; end_date?: string; status?: string }, @Req() req: Request) {
+    // Только лидер может создавать проекты
+    const user = req.user!;
+    if (user.role !== 'leader') {
+      return { error: 'Недостаточно прав' };
+    }
+    const project = this.projectsRepository.create({
+      name: body.name,
+      description: body.description ?? null,
+      start_date: body.start_date ?? null,
+      end_date: body.end_date ?? null,
+      status: body.status ?? null,
+    });
+    await this.projectsRepository.save(project);
+    return project;
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch(':id')
+  async updateProject(@Param('id') id: string, @Body() body: { name?: string; description?: string; start_date?: string; end_date?: string; status?: string }, @Req() req: Request) {
+    // Только лидер может редактировать проекты
+    const user = req.user!;
+    if (user.role !== 'leader') {
+      return { error: 'Недостаточно прав' };
+    }
+    const projectId = parseInt(id, 10);
+    if (isNaN(projectId)) {
+      return { error: 'Некорректный ID проекта' };
+    }
+    const project = await this.projectsRepository.findOne({ where: { id: projectId } });
+    if (!project) {
+      return { error: 'Проект не найден' };
+    }
+    if (body.name !== undefined) project.name = body.name;
+    if (body.description !== undefined) project.description = body.description;
+    if (body.start_date !== undefined) project.start_date = body.start_date;
+    if (body.end_date !== undefined) project.end_date = body.end_date;
+    if (body.status !== undefined) project.status = body.status;
+    await this.projectsRepository.save(project);
+    return project;
   }
 
   @UseGuards(AuthGuard)
