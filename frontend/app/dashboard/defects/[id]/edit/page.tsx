@@ -53,12 +53,22 @@ export default function DefectDetailsPage() {
         });
         if (response.ok) {
           const data = await response.json();
-          setComments(data.map((c: any) => ({
-            id: c.id,
-            author: c.user.full_name || c.user.username,
-            text: c.content,
-            date: new Date(c.created_at).toISOString().split('T')[0],
-          })));
+          setComments(data.map((c: any) => {
+            const dateObj = new Date(c.created_at);
+            const formattedDate = dateObj.toLocaleString('ru-RU', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return {
+              id: c.id,
+              author: c.user.full_name || c.user.username,
+              text: c.content,
+              date: formattedDate,
+            };
+          }));
         }
       } catch (error) {
         console.error(error);
@@ -233,11 +243,19 @@ export default function DefectDetailsPage() {
     e.preventDefault();
     if (newComment.trim()) {
       try {
+        const token = localStorage.getItem('access_token');
+        let author = 'Пользователь';
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            author = payload.full_name || payload.username || 'Пользователь';
+          } catch {}
+        }
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/comments`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             defect_id: parseInt(defectId as string, 10),
@@ -248,11 +266,13 @@ export default function DefectDetailsPage() {
           throw new Error('Failed to add comment');
         }
         const createdComment = await response.json();
+        // Use author from token, and set date to now with time
+        const now = new Date();
         setComments(prev => [...prev, {
           id: createdComment.id,
-          author: createdComment.user.full_name || createdComment.user.username,
+          author: author,
           text: createdComment.content,
-          date: new Date(createdComment.created_at).toISOString().split('T')[0],
+          date: now.toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
         }]);
         setNewComment('');
       } catch (error) {
@@ -297,71 +317,117 @@ export default function DefectDetailsPage() {
   }
 
   return (
-    <div className="pt-14 pb-16 h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Дефект #{defect.id}: {defect.title}</h2>
+        <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-[#5E62DB]/10">
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#5E62DB"/></svg>
           </div>
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Дефект #{defect.id}: {defect.title}</h2>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div className="flex flex-col items-center space-y-4">
-                {defect.attachments && defect.attachments.length > 0 ? (
-                  <img
-                    src={`http://localhost:3001${defect.attachments[0].file_path}`}
-                    alt="Фото дефекта"
-                    className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700"
-                  />
-                ) : (
-                  <div className="w-48 h-48 rounded-lg border-4 border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-600">
-                    Нет фото
-                  </div>
-                )}
-                <p className="text-sm text-gray-600 dark:text-gray-400">Фото дефекта</p>
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Название</label>
-                  <p className="text-gray-900 dark:text-white">{defect.title}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Левая карточка: фото, инфо, история */}
+          <div className="flex flex-col gap-8">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-7 flex flex-col items-center">
+              {/* ...existing code... */}
+              {defect.attachments && defect.attachments.length > 0 ? (
+                <img
+                  src={`http://localhost:3001${defect.attachments[0].file_path}`}
+                  alt="Фото дефекта"
+                  className="w-48 h-48 rounded-lg object-cover border-4 border-gray-100 dark:border-gray-700 mb-2"
+                />
+              ) : (
+                <div className="w-48 h-48 rounded-lg border-4 border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-600 mb-2">
+                  Нет фото
                 </div>
-
+              )}
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Фото дефекта</p>
+              <div className="w-full space-y-3">
+                {/* ...existing code... */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Проект</label>
-                  <p className="text-gray-900 dark:text-white">{defect.project.name}</p>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Название</label>
+                  <div className="text-base font-semibold text-gray-900 dark:text-white">{defect.title}</div>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Стадия</label>
-                  <p className="text-gray-900 dark:text-white">{defect.stage ? defect.stage.name : 'Не указана'}</p>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Проект</label>
+                  <div className="text-base text-gray-900 dark:text-white">{defect.project.name}</div>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Приоритет</label>
-                  <p className={`font-medium ${getPriorityColor(defect.priority.name)}`}>{defect.priority.name}</p>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Стадия</label>
+                  <div className="text-base text-gray-900 dark:text-white">{defect.stage ? defect.stage.name : 'Не указана'}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Приоритет</label>
+                  <div className={`font-medium ${getPriorityColor(defect.priority.name)}`}>{defect.priority.name}</div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Текущий статус</label>
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(defect.status.name)}`}>
-                  {getStatusName(defect.status.name)}
-                </span>
+            {/* История изменений - timeline, без повторов */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">История изменений</h3>
+              {history.length > 0 ? (
+                <div className="relative pl-6">
+                  <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-[#5e62db91] dark:bg-blue-800/40" />
+                  {(() => {
+                    // ...existing code...
+                    let lastKey = '';
+                    return history.filter((entry, idx, arr) => {
+                      const key = `${entry.action}|${entry.old_value}|${entry.new_value}|${entry.date}`;
+                      if (key === lastKey) return false;
+                      lastKey = key;
+                      return true;
+                    }).map((entry, idx) => {
+                      let message = '';
+                      if (entry.action === 'status_changed') {
+                        message = `Статус: "${entry.old_value}" → "${entry.new_value}"`;
+                      } else if (entry.action === 'assignee_changed') {
+                        message = `Исполнитель: "${entry.old_value}" → "${entry.new_value}"`;
+                      } else if (entry.action === 'due_date_changed') {
+                        message = `Срок: "${entry.old_value}" → "${entry.new_value}"`;
+                      }
+                      return (
+                        <div key={entry.id} className="relative flex items-start mb-6 group">
+                          <span className="absolute -left-2.5 top-8 w-3 h-3 rounded-full bg-[#5E62DB] group-hover:scale-110 transition-transform border-2 border-white dark:border-gray-900" />
+                          <div className="ml-4 flex-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700 shadow-sm">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-medium text-gray-900 dark:text-white">{entry.author}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{entry.date}</span>
+                            </div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{message}</p>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              ) : <p className="text-center text-gray-600 dark:text-gray-400">Нет истории изменений.</p>}
+            </div>
+          </div>
+
+          {/* Правая карточка: действия и статус + комментарии */}
+          <div className="flex flex-col gap-8">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-7 space-y-6 flex flex-col h-fit">
+              {/* ...existing code... */}
+              <div className="w-full flex flex-row items-center gap-2 mb-2">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Текущий статус:</label>
+                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(defect.status.name)}`}>{getStatusName(defect.status.name)}</span>
               </div>
+              {/* ...existing code for status actions, description, dates... */}
               {defect.status.name === 'Новый' && (() => {
-                // Decode token to check if user is manager
+                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
                   const payload = JSON.parse(atob(token.split('.')[1]));
                   if (payload.role === 'manager') {
                     return (
-                      <>
+                      <div className="flex flex-col gap-3 w-full max-w-xs mx-auto mt-2">
+                        {/* ...existing code... */}
                         <div>
-                          <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Назначить исполнителя</label>
+                          <label htmlFor="assignee" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Назначить исполнителя</label>
                           <select
                             id="assignee"
                             value={assigneeId}
@@ -374,9 +440,8 @@ export default function DefectDetailsPage() {
                             ))}
                           </select>
                         </div>
-
                         <div>
-                          <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Сроки выполнения</label>
+                          <label htmlFor="dueDate" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Сроки выполнения</label>
                           <input
                             type="date"
                             id="dueDate"
@@ -385,17 +450,13 @@ export default function DefectDetailsPage() {
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
                           />
                         </div>
-
-                        <div>
-                          <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Изменить статус на "В работе"</label>
-                          <button
-                            onClick={changeStatusToInWork}
-                            className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
-                          >
-                            Назначить и изменить статус
-                          </button>
-                        </div>
-                      </>
+                        <button
+                          onClick={changeStatusToInWork}
+                          className="w-full px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors mt-2"
+                        >
+                          Назначить и изменить статус
+                        </button>
+                      </div>
                     );
                   }
                 } catch (error) {
@@ -405,7 +466,7 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'В работе' && (() => {
-                // Decode token to check if user is the assignee
+                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -431,7 +492,7 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'На проверке' && (() => {
-                // Decode token to check if user is manager
+                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -456,7 +517,7 @@ export default function DefectDetailsPage() {
               })()}
 
               {defect.status.name === 'Закрыт' && (() => {
-                // Decode token to check if user is manager
+                // ...existing code...
                 const token = localStorage.getItem('access_token');
                 if (!token) return null;
                 try {
@@ -508,72 +569,39 @@ export default function DefectDetailsPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">История изменений</h3>
-            <div className="space-y-4 mb-6">
-              {history.length > 0 ? history.map((entry) => {
-                let message = '';
-                if (entry.action === 'status_changed') {
-                  message = `Статус изменен с "${entry.old_value}" на "${entry.new_value}"`;
-                } else if (entry.action === 'assignee_changed') {
-                  message = `Исполнитель изменен с "${entry.old_value}" на "${entry.new_value}"`;
-                } else if (entry.action === 'due_date_changed') {
-                  message = `Срок выполнения изменен с "${entry.old_value}" на "${entry.new_value}"`;
-                }
-                return (
-                  <div key={entry.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+            {/* Комментарии */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Комментарии</h3>
+              <div className="space-y-4 mb-2">
+                {comments.length > 0 ? comments.map((comment) => (
+                  <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-gray-900 dark:text-white">{entry.author}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{entry.date}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{comment.author || 'Пользователь'}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{comment.date}</span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{comment.text}</p>
                   </div>
-                );
-              }) : <p className="text-center text-gray-600 dark:text-gray-400">Нет истории изменений.</p>}
+                )) : <p className="text-center text-gray-600 dark:text-gray-400">Нет комментариев.</p>}
+              </div>
+              <form onSubmit={addComment} className="flex space-x-2 mt-2">
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Напишите комментарий..."
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Добавить
+                </button>
+              </form>
             </div>
-
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Комментарии</h3>
-            <div className="space-y-4 mb-6">
-              {comments.length > 0 ? comments.map((comment) => (
-                <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-gray-900 dark:text-white">{comment.author}</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{comment.date}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{comment.text}</p>
-                </div>
-              )) : <p className="text-center text-gray-600 dark:text-gray-400">Нет комментариев.</p>}
-            </div>
-
-            <form onSubmit={addComment} className="flex space-x-2">
-              <input
-                type="text"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Напишите комментарий..."
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                Добавить
-              </button>
-            </form>
-          </div>
-
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={() => router.push('/defects')}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              Назад
-            </button>
           </div>
         </div>
-      </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
@@ -619,5 +647,50 @@ export default function DefectDetailsPage() {
         </div>
       )}
     </div>
+
+    {/* Upload Modal */}
+    {showUploadModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Загрузить отчёт</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Выберите файл</label>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.pdf,.doc,.docx"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5E62DB] focus:border-transparent"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedFile(null);
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={async () => {
+                  if (selectedFile) {
+                    await uploadReport(selectedFile);
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                  }
+                }}
+                disabled={!selectedFile}
+                className="px-4 py-2 bg-[#5E62DB] hover:bg-[#4A4FB8] disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Отправить
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 }
