@@ -23,7 +23,7 @@ export class AuthService {
     }
     const payload = { sub: user.id, username: user.username, email: user.email, role: user.role?.name || 'engineer' };
     return {
-      access_token: await this.jwtService.signAsync(payload, { expiresIn: '15m' }),
+      access_token: await this.jwtService.signAsync(payload, { expiresIn: '99m' }),
       refresh_token: await this.jwtService.signAsync(payload, { expiresIn: '7d', secret: jwtConstants.refreshSecret }),
     };
   }

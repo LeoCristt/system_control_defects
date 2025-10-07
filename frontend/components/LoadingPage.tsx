@@ -1,93 +1,119 @@
-// components/Spinner.tsx
+// components/LoadingPage.tsx
 "use client";
 
 import React from "react";
 
-type SpinnerProps = {
-  /** размер в пикселях (по умолчанию 28) */
-  size?: number;
-  /** основной цвет (акцент) — будет плавно исчезать */
-  accent?: string;
-  /** при true — позиционируется абсолютно по центру контейнера (обычно не нужен, если вы используете flex) */
-  center?: boolean;
-  className?: string;
+type LoadingPageProps = {
+  /** Основное сообщение (заголовок) */
+  message?: string;
+  /** Если передать число 0..100, покажется индикатор прогресса */
+  progress?: number | null;
+  /** Подсказка под прогрессом */
+  hint?: string;
 };
 
-export default function Spinner({
-  size = 28,
-  accent = "#5E62DB",
-  center = false,
-  className = "",
-}: SpinnerProps) {
-  // CSS custom properties через inline style
-  const style: React.CSSProperties = {
-    // --size управляет размерами, остальная геометрия сделана в em
-    ["--size" as any]: `${size}px`,
-    ["--accent" as any]: accent,
-  };
+export default function LoadingPage({
+  message = "Загрузка...",
+  progress = null,
+  hint = "Подождите немного — мы подготавливаем данные",
+}: LoadingPageProps) {
+  const showProgress = typeof progress === "number" && !Number.isNaN(progress);
 
   return (
-    <div
-      role="status"
-      aria-label="Загрузка"
-      className={`spinner ${center ? "spinner-center" : ""} ${className}`}
-      style={style}
-    >
-      {/* 12 лопастей */}
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="spinner-blade" />
-      ))}
+    <div className="pt-14 pb-16 min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center">
+      <div className="w-full max-w-xl px-6">
+        <div className="mx-auto rounded-xl p-8 bg-white dark:bg-gray-900 text-center">
+          <div role="status" aria-live="polite" className="flex items-center justify-center mb-6">
+            <svg
+              className="w-20 h-20 animate-spin"
+              viewBox="0 0 50 50"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="lg" x1="0" x2="1">
+                  <stop offset="0%" stopColor="#5E62DB" />
+                  <stop offset="100%" stopColor="#7C9BFF" />
+                </linearGradient>
+              </defs>
+
+              <circle
+                cx="25"
+                cy="25"
+                r="20"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeOpacity="0.08"
+                fill="none"
+                className="text-gray-600 dark:text-gray-300"
+              />
+
+              <path
+                d="M25 5
+                   a20 20 0 0 1 0 40
+                   a20 20 0 0 1 0 -40"
+                stroke="url(#lg)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="80"
+                strokeDashoffset="60"
+              />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">{message}</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Мы загружаем страницу и подготавливаем данные — это не займёт много времени.
+          </p>
+
+          <div className="mt-6">
+            {showProgress ? (
+              <>
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden border border-gray-100 dark:border-gray-800">
+                  <div
+                    className="h-2 rounded-full"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, progress as number))}%`,
+                      background: "linear-gradient(90deg,#5E62DB 0%,#7C9BFF 100%)",
+                      transition: "width 400ms ease",
+                    }}
+                  />
+                </div>
+                <div className="mt-3 flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
+                  <span>{Math.round(Math.max(0, Math.min(100, progress as number)))}%</span>
+                  <span>{hint}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "#5E62DB", animation: "bounce 0.9s infinite" }} />
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "#7C9BFF", animation: "bounce 0.9s infinite 0.12s" }} />
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "#A7C0FF", animation: "bounce 0.9s infinite 0.24s" }} />
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Подключение к серверу…</div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            Если загрузка длится очень долго — проверьте интернет-соединение или перезагрузите страницу.
+          </div>
+        </div>
+      </div>
 
       <style jsx>{`
-        .spinner {
-          /* используется единица em, где 1em = var(--size) */
-          font-size: var(--size, 28px);
-          position: relative;
-          display: inline-block;
-          width: 1em;
-          height: 1em;
+        @keyframes bounce {
+          0% { transform: translateY(0); opacity: 0.9; }
+          50% { transform: translateY(-6px); opacity: 1; }
+          100% { transform: translateY(0); opacity: 0.9; }
         }
-
-        /* если нужно абсолютное центрирование внутри контейнера */
-        .spinner-center {
-          position: absolute;
-          left: 0;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          margin: auto;
-        }
-
-        .spinner .spinner-blade {
-          position: absolute;
-          left: 0.4629em;
-          bottom: 0;
-          width: 0.074em;
-          height: 0.2777em;
-          border-radius: 0.0555em;
-          background-color: transparent;
-          transform-origin: center -0.2222em;
-          animation: spinner-fade 1s infinite linear;
-        }
-
-        /* повороты и задержки (каждые 30deg, шаг задержки ~1/12 = 0.0833s) */
-        .spinner .spinner-blade:nth-child(1)  { transform: rotate(0deg);     animation-delay: 0s;     }
-        .spinner .spinner-blade:nth-child(2)  { transform: rotate(30deg);    animation-delay: 0.083s;  }
-        .spinner .spinner-blade:nth-child(3)  { transform: rotate(60deg);    animation-delay: 0.166s;  }
-        .spinner .spinner-blade:nth-child(4)  { transform: rotate(90deg);    animation-delay: 0.249s;  }
-        .spinner .spinner-blade:nth-child(5)  { transform: rotate(120deg);   animation-delay: 0.332s;  }
-        .spinner .spinner-blade:nth-child(6)  { transform: rotate(150deg);   animation-delay: 0.415s;  }
-        .spinner .spinner-blade:nth-child(7)  { transform: rotate(180deg);   animation-delay: 0.498s;  }
-        .spinner .spinner-blade:nth-child(8)  { transform: rotate(210deg);   animation-delay: 0.581s;  }
-        .spinner .spinner-blade:nth-child(9)  { transform: rotate(240deg);   animation-delay: 0.664s;  }
-        .spinner .spinner-blade:nth-child(10) { transform: rotate(270deg);   animation-delay: 0.747s;  }
-        .spinner .spinner-blade:nth-child(11) { transform: rotate(300deg);   animation-delay: 0.830s;  }
-        .spinner .spinner-blade:nth-child(12) { transform: rotate(330deg);   animation-delay: 0.913s;  }
-
-        /* анимация — от акцента к прозрачному */
-        @keyframes spinner-fade {
-          0%   { background-color: var(--accent); }
-          100% { background-color: transparent;   }
+        /* ensure svg spin speed is comfortable */
+        .animate-spin { animation: spin 1.4s linear infinite; }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
